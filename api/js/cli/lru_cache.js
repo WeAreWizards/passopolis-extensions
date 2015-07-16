@@ -78,7 +78,7 @@ var LRUCachePriority = {
 // LRUCache constructor
 // Creates a new cache object
 // INPUT: maxSize (optional) - indicates how many items the cache can hold.
-//                             default is -1, which means no limit on the 
+//                             default is -1, which means no limit on the
 //                             number of items.
 /** @constructor
 @param {number} maxSize
@@ -91,7 +91,7 @@ function LRUCache(maxSize) {
     this.maxSize = maxSize;
     this.fillFactor = 0.75;
     this.purgeSize = Math.round(this.maxSize * this.fillFactor);
-    
+
     this.stats = {};
     this.stats.hits = 0;
     this.stats.misses = 0;
@@ -106,8 +106,8 @@ LRUCache.prototype.getItem = function(key) {
 
     // retrieve the item from the cache
     var item = this.items[key];
-    
-    if (item !== null) {
+
+    if (item !== undefined) {
         if (!this._isExpired(item)) {
             // if the item is not expired
             // update its last accessed date
@@ -118,10 +118,10 @@ LRUCache.prototype.getItem = function(key) {
             item = null;
         }
     }
-    
+
     // return the item value (if it exists), or null
     var returnVal = null;
-    if (item !== null) {
+    if (item !== undefined) {
         returnVal = item.value;
         this.stats.hits++;
     } else {
@@ -142,10 +142,10 @@ LRUCache.prototype.getItem = function(key) {
 //                         the last cache access after which the item
 //                         should expire
 //      priority: How important it is to leave this item in the cache.
-//                You can use the values LRUCachePriority.Low, .Normal, or 
-//                .High, or you can just use an integer.  Note that 
-//                placing a priority on an item does not guarantee 
-//                it will remain in cache.  It can still be purged if 
+//                You can use the values LRUCachePriority.Low, .Normal, or
+//                .High, or you can just use an integer.  Note that
+//                placing a priority on an item does not guarantee
+//                it will remain in cache.  It can still be purged if
 //                an expiration is hit, or if the cache is full.
 //      callback: A function that gets called when the item is purged
 //                from cache.  The key and value of the removed item
@@ -162,21 +162,21 @@ LRUCache.prototype.setItem = function(key, value, options) {
             throw new Error("key cannot be null or empty");
         this.key = k;
         this.value = v;
-        if (o === null)
+        if (o === undefined)
             o = {};
-        if (o.expirationAbsolute !== null)
+        if (o.expirationAbsolute !== undefined)
             o.expirationAbsolute = o.expirationAbsolute.getTime();
-        if (o.priority === null)
+        if (o.priority === undefined)
             o.priority = LRUCachePriority.Normal;
         this.options = o;
         this.lastAccessed = new Date().getTime();
     }
 
     // add a new cache item to the cache
-    if (this.items[key] !== null)
+    if (this.items[key] !== undefined)
         this._removeItem(key);
     this._addItem(new LRUCacheItem(key, value, options));
-    
+
     // if the cache is full, purge it
     if ((this.maxSize > 0) && (this.count > this.maxSize)) {
         this._purge();
@@ -191,16 +191,16 @@ LRUCache.prototype.clear = function() {
     // loop through each item in the cache and remove it
     for (var key in this.items) {
       this._removeItem(key);
-    }  
+    }
 };
 
 // ****************************************************************************
 // LRUCache._purge (PRIVATE FUNCTION)
 // remove old elements from the cache
 LRUCache.prototype._purge = function() {
-    
+
     var tmparray = [];
-    
+
     // loop through the cache, expire items that should be expired
     // otherwise, add the item to an array
     for (var key in this.items) {
@@ -211,18 +211,18 @@ LRUCache.prototype._purge = function() {
             tmparray.push(item);
         }
     }
-    
+
     if (tmparray.length > this.purgeSize) {
 
         // sort this array based on cache priority and the last accessed date
-        tmparray = tmparray.sort(function(a, b) { 
+        tmparray = tmparray.sort(function(a, b) {
             if (a.options.priority != b.options.priority) {
                 return b.options.priority - a.options.priority;
             } else {
                 return b.lastAccessed - a.lastAccessed;
             }
         });
-        
+
         // remove items from the end of the array
         while (tmparray.length > this.purgeSize) {
             var ritem = tmparray.pop();
@@ -246,9 +246,9 @@ LRUCache.prototype._removeItem = function(key) {
     var item = this.items[key];
     delete this.items[key];
     this.count--;
-    
+
     // if there is a callback function, call it at the end of execution
-    if (item.options.callback !== null) {
+    if (item.options.callback !== undefined) {
         var callback = function() {
             item.options.callback(item.key, item.value);
         };
@@ -265,7 +265,7 @@ LRUCache.prototype._isExpired = function(item) {
     if ((item.options.expirationAbsolute) && (item.options.expirationAbsolute < now)) {
         // if the absolute expiration has passed, expire the item
         expired = true;
-    } 
+    }
     if (!expired && (item.options.expirationSliding)) {
         // if the sliding expiration has passed, expire the item
         var lastAccess = item.lastAccessed + (item.options.expirationSliding * 1000);
@@ -303,7 +303,7 @@ var makeKey = function() {
 // Decent hash function
 // TODO: think about security implications of using this in keys.
 var hash = function(s){
-  return s.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a;},0);              
+  return s.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a;},0);
 };
 
 cache.LRUCache = LRUCache;
