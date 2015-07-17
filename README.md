@@ -1,49 +1,18 @@
-browser-ext
-===========
+# Welcome
 
-Setup
-=====
+This is the continuation of the excellent Mitro password manager under
+a new brand (https://passopolis.com/).
 
-1. Install [nodeJS](http://nodejs.org/) and its package manager [npm](https://www.npmjs.org/). 
+We split out the extensions into their own repository (this) for
+easier development.
 
-2. Get node dependencies and crypto dependencies (run this once). 
+Unfortunately the extension builder scripts are all broken in their
+current form. We have a hacked-together shell script that copies a few
+files around and then packs the extension which we will release when
+it's a bit less ugly.
 
-        git clone git@github.com:mitro-co/browser-ext.git
-        cd browser-ext/api; ./build.sh
+# Branding
 
-   (Sometimes you can incur in [this error](http://plaidzooks.tumblr.com/post/36894116867/using-node-js-on-debian-ubuntu-systems))
-
-3. Build
-
-        cd browser-ext/login && make
-
-4. Go to [chrome://extensions](chrome://extensions). Check the developer mode box.
-
-5. Click Load unpacked extension -> `browser-ext/login/build/chrome/release`
-
-
-
-If you want to run regression tests:
-====================================
-
-This requires server code.
-
-1. Checkout dependencies in the directory above `browser-ext`:
-
-        git clone git@github.com:mitro-co/mitro-core.git
-
-2. Symlink mitro-core to `browser-ext/api/server`:
-
-        ln -s ../../mitro-core/ browser-ext/api/server
-
-3. Run regression tests:
-
-        cd api/js/cli && ./runtests.sh
-
-
-Notes
-=====
-
-We can't use symlinks to edit files in place because Chrome does not load symlinked resources:
-
-http://code.google.com/p/chromium/issues/detail?id=27185
+We're replacing the Mitro branding with our own Passopolis
+branding. This makes it easier to understand that the service is still
+active when searching on the Internet.
