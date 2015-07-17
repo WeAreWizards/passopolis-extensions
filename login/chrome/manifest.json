@@ -2,19 +2,19 @@
   "name": "Passopolis Login Manager",
   "short_name": "Passopolis",
   "manifest_version": 2,
-  "version": "0.10.58",
+  "version": "2015.7.18",
   "background": {
     "scripts": []
   },
   "description": "Securely saves passwords and lets you share them with others",
   "icons" : {
-    "16": "img/mitro_logo-16.png",
-    "128": "img/mitro_logo-128.png"
+    "16": "img/passopolis-logo-16.png",
+    "128": "img/passopolis-logo-128.png"
   },
   "browser_action": {
     "default_icon": {
-      "19": "img/mitro_logo_gray-19.png",
-      "38": "img/mitro_logo_gray-38.png"
+      "19": "img/passopolis-logo-19.png",
+      "38": "img/passopolis-logo-38.png"
     },
     "default_title": "Passopolis Login Manager",
     "default_popup": "html/popup.html"
@@ -35,7 +35,7 @@
     "contextMenus"
   ],
   "web_accessible_resources": [
-    "img/mitro_logo-128.png",
+    "img/passopolis-logo-128.png",
     "img/close_hover.png",
     // required so content scripts and the server can open these pages
     "html/admin-dashboard.html",
