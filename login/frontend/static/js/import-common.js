@@ -114,7 +114,7 @@ function uploadProgress(destinationOrgAndGroup) {
   $('#password-list').hide();
   numberCompleted++;
   $("#upload-progress").empty();
-  $("#upload-progress").append("<h3>" + numberCompleted + "/" + passwords.length + " secrets added to Mitro. </h3>");
+  $("#upload-progress").append("<h3>" + numberCompleted + "/" + passwords.length + " secrets added to Passopolis. </h3>");
   addDataToMitro(destinationOrgAndGroup);
 }
 
