@@ -102,7 +102,7 @@ helpers_background.BackgroundHelper = function() {
             chrome.tabs.update(tabId, {url: url});
         }
     };
-    
+
     this.getClientIdentifier = function(){
         var clientIdentifier;
         try {
@@ -111,10 +111,10 @@ helpers_background.BackgroundHelper = function() {
             console.log('could not read chrome extension info');
             clientIdentifier = 'unknown';
         }
-        
+
         return clientIdentifier;
     };
-    
+
     /**
      * Activate context menu features
      */
@@ -122,7 +122,7 @@ helpers_background.BackgroundHelper = function() {
         // Create menu group
         chrome.contextMenus.create({
             id: 'mitro_context_group',
-            title: 'Mitro',
+            title: 'Passopolis',
             contexts: ['selection']
         });
 
@@ -141,14 +141,14 @@ helpers_background.BackgroundHelper = function() {
             parentId: 'mitro_context_group'
         });
     };
-    
+
     /**
      * Deactivate context menu features
      */
     this.removeContextMenu = function() {
         chrome.contextMenus.remove('mitro_context_group');
     };
-    
+
     this.bindClient = function(client){
         chrome.extension.onMessage.addListener(function(request, sender, sendResponse){
             var message = request;

@@ -67,7 +67,7 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
             infobar = null;
         };
 
-        var buttons = [{text: 'Log in to Mitro', action: loginAction}];
+        var buttons = [{text: 'Log in to Passopolis', action: loginAction}];
 
         infobar = displayInfobar(message, [], buttons, closeAction);
     };
@@ -86,7 +86,7 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
         if (isInfobarShown()) {
             return;
         }
-        var message = 'Do you want Mitro to replace your password for \'' + username + '\'?';
+        var message = 'Do you want Passopolis to replace your password for \'' + username + '\'?';
         var replaceAction = function (selection) {
             formData.secretId = replacedSecretData.secretId;
             if (isNaN(formData.orgId)) {
@@ -117,7 +117,7 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
         if (isInfobarShown()) {
             return;
         }
-        var message = 'Do you want Mitro to save your password for \'' + username + '\'?';
+        var message = 'Do you want Passopolis to save your password for \'' + username + '\'?';
 
         var saveAction = function (selection) {
             formData.orgId = parseInt(selection ? selection.value : null, 10);
@@ -171,7 +171,7 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
         }
 
         console.log('login infobar', selectOptions);
-        var message = 'Log in with Mitro as:';
+        var message = 'Log in with Passopolis as:';
 
         var loginAction = function(selection) {
             console.log('--> loginAccepted', selection.value);
@@ -376,18 +376,18 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
                         console.log('trying to redirect.....');
                         helper.redirectTo(helper.getURL(HOME_PATH));
                     });
-                    
+
                 }
             }
         });
-        
+
         if (window.location.hostname.match(/(^|\.)mitro\.co$/)) {
             // TODO: Remove /static/html version once deployed
             var REMOTE_SERVICES_PATHS = {'/extension_services.html': true};
             var REMOTE_ADMIN_SYNC_PATH = '/extension_admin_sync.html';
             var REMOTE_ORG_PATH = '/extension_organizations.html';
             var path = window.location.pathname;
-        
+
             if (isInstallPage(window.location.href)) {
                 var redirectUrl = getInstallRedirectUrl(window.location.href);
                 helper.redirectTo(redirectUrl);
@@ -396,7 +396,7 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
             if ((path in REMOTE_SERVICES_PATHS) || (window.location.href.match('^https://www[.]mitro[.]co/$'))) {
                 helper.redirectTo(helper.getURL(SERVICES_PATH));
             }
-            
+
             if (path === REMOTE_ADMIN_SYNC_PATH) {
                 helper.redirectTo(helper.getURL(ADMIN_SYNC_PATH));
             }
@@ -429,8 +429,8 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
         '};'
         ].join('\n');
 
-    
-    
+
+
     var hasBeenInjected = {};
     var injectScriptIntoPage = function (scriptString) {
         if (hasBeenInjected[scriptString]) {
@@ -527,7 +527,7 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
             maybeShowLoginInfobar(serviceInstances);
             $(document).off('click', 'form', bindToForm);
         };
-        
+
         $(document).on('click', 'form', bindToForm);
 
 
@@ -644,4 +644,3 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
             }
         });
     };
-
