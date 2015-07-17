@@ -257,7 +257,7 @@ var mitroSignup = function (username, password, rememberMe, onSuccess, onError) 
     var onCreateIdentityError = function (error) {
         reportError(onError, 'Error during signup: ' + error.userVisibleError);
     };
-    
+
     helper.cookies.get({url: 'http://' + MITRO_HOST, name: 'glcid'}, function (cookie) {
         var analyticsId = null;
 
@@ -290,7 +290,7 @@ var commonOnLoginCode = function(identity, rememberMe, onSuccess, onError) {
        refreshTabsOnMitroLogin();
        onSuccess();
     }, onError);
-    
+
     helper.addContextMenu();
 };
 
@@ -351,7 +351,7 @@ var mitroLogin = function (username, password, onSuccess, onError, onTwoFactorAu
 
 var mitroLogout = function (onSuccess, onError) {
     console.log('mitroLogout');
-    
+
     // This will clear the state in the worker
     fe.workerLogout(userIdentity);
 
@@ -366,7 +366,7 @@ var mitroLogout = function (onSuccess, onError) {
     formRecorder = {};
 
     helper.removeContextMenu();
-    
+
     // TODO: Record the logout on the server.
     reportSuccess(onSuccess, null);
 };
@@ -415,12 +415,12 @@ var getLoginState = function (onSuccess, onError) {
 };
 
 var updateIconState = function () {
-    var LOGGED_OUT_ICONS = {'19': 'img/mitro_logo_gray-19.png',
-                            '32': 'img/mitro_logo_gray-32.png',
-                            '38': 'img/mitro_logo_gray-38.png'};
-    var LOGGED_IN_ICONS = {'19': 'img/mitro_logo-19.png',
-                           '32': 'img/mitro_logo-32.png',
-                           '38': 'img/mitro_logo-38.png'};
+    var LOGGED_OUT_ICONS = {'19': 'img/passopolis-logged-out-19.png',
+                            '32': 'img/passopolis-logged-out-32.png',
+                            '38': 'img/passopolis-logged-out-38.png'};
+    var LOGGED_IN_ICONS = {'19': 'img/passopolis-logo-19.png',
+                           '32': 'img/passopolis-logo-32.png',
+                           '38': 'img/passopolis-logo-38.png'};
 
     var icons = isLoggedIn() ? LOGGED_IN_ICONS : LOGGED_OUT_ICONS;
     helper.setIcon({path: icons});
@@ -814,7 +814,7 @@ var changeRemotePassword = function(request, onSuccess, onError) {
 /**
  * Add secret from selection using page url as a title.
  * To be called from the content script.
- * 
+ *
  * @param {Object} url - page url
  * @param {Object} text - selection text
  */
