@@ -28,9 +28,9 @@
  * Generates random string of the given length
  * The resulting string contains capital letters,
  * small letters and numbers
- * 
+ *
  * @param length {integer} the desired string length
- * 
+ *
  * TODO: move this function to the utils
  */
 var randomString = function(length) {
@@ -48,7 +48,7 @@ var randomString = function(length) {
  * Manages the messages transport
  * from/to different extension parts in case
  * when direct communication is not possible
- * 
+ *
  * @constructor
  * @param {string} address the local client address
  * ('background', 'extension', 'content', 'page')
@@ -68,11 +68,11 @@ var Client = function(address) {
     // the direct access flag. This should be set to true in case when we have
     // the ability to communicate with the remote script directly
     this.directAccess = false;
-    
+
     /**
      * Sends the message to its destination
      * using the appropriate sender from the Client.senders dictionary
-     * 
+     *
      * @param {Object} message
      * @param {function(Object)=} callback
      */
@@ -89,13 +89,13 @@ var Client = function(address) {
             console.log('ERROR. No sender found for the message ' + message.type + ' from ' + message.from + ' to ' + message.to);
         }
     };
-     
+
     /**
      * Processes the the incoming messages.
      * Either passes the function to the appropriate listener
      * or forwarding it to the destination (proxying)
      * if message.to address doesn't match the local address.
-     * 
+     *
      * We need the proxy functionality for the mitro pages messages
      * which are being proxied by the content scripts
      * and for the firefox messaging implementation
@@ -122,7 +122,7 @@ var Client = function(address) {
                 // if the message is not the response we expect for, then we try
                 // to find the handler for it among the listeners
                 // matching the message.from address
-                
+
                 // the listener function able to handle the message has to return true.
                 // That's how we know the message has got handled and we don't need
                 // to pass it to the next registered listener.
@@ -159,36 +159,36 @@ Client.prototype.settings = {};
 
 /**
  * Turns the request message into the response
- * 
+ *
  * @param {!Object} message original message
  * @param {!Object} data the response data
  * @returns {!Object} the recomposed response message
  */
 Client.prototype.composeResponse = function(message, data) {
     message.response = true;
-    
+
     // interchanging the sender and the receiver addresses
     var temp = message.from;
     message.from = message.to;
     message.to = temp;
-    
+
     // removing the request data
     delete message.data;
     if (typeof(message.sendResponse) === 'function'){
         delete message.sendResponse;
     }
-    
+
     // setting the response data
     for (var i in data) {
         message[i] = data[i];
     }
-    
+
     return message;
 };
 
 /**
  * Registers the sender function
- * 
+ *
  * @param to {string, array} the receiver(s) to be served by the sender
  * @param sender {function} the sender function
  */
@@ -204,10 +204,10 @@ Client.prototype.addSender = function(to, sender) {
 
 /**
  * Puts the callback to the callbacks queue
- * 
+ *
  * @param {!Object} message
  * @param {function(!Object)} callback
- * 
+ *
  * TODO(ivan): we don't need to pass the entire message here
  * The message.id would be enough
  */
@@ -217,7 +217,7 @@ Client.prototype.addCallbackListener = function(message, callback) {
 
 /**
  * Registers the incoming messages handler
- * 
+ *
  * @param from {string} the sender address the handler expects messages from
  * @param handler {function} the handler function
  */
@@ -234,7 +234,7 @@ Client.prototype.addListener = function(from, handler) {
 
 /**
  * This is a legacy code used for the background API calls
- * 
+ *
  * @param {string} type keeps the background API call type
  * @param {Object} data
  * @param {function(Object)} onSuccess
@@ -242,7 +242,7 @@ Client.prototype.addListener = function(from, handler) {
  */
 Client.prototype.dispatchMessage = function (type, data, onSuccess, onError) {
     var message = this.composeMessage('background', type, data);
-    
+
     var responseCallback = function (message) {
         var response = message.data;
         if (typeof response === 'object' && 'error' in response) {
@@ -264,7 +264,7 @@ Client.prototype.dispatchMessage = function (type, data, onSuccess, onError) {
 
 /**
  * Creates the message object having the desired parameters
- * 
+ *
  * @param {string} to message destination address
  * @param {string} type message type
  * @param {Object} data
@@ -278,7 +278,7 @@ Client.prototype.composeMessage = function(to, type, data) {
         from: this.address,
         to: to
     };
-    
+
     return message;
 };
 
@@ -291,8 +291,8 @@ Client.prototype.initApiCalls = function() {
             var self = this;
             helper.isPopup(function(is_popup) {
                 if (is_popup) {
-                    // if invoked from popup, we can't get the current tab, so we 
-                    // give it a very large tab number to ensure that the new tab forms 
+                    // if invoked from popup, we can't get the current tab, so we
+                    // give it a very large tab number to ensure that the new tab forms
                     // to the right of all the other tabs.
                     var VERY_LARGE_TAB_NUMBER = 999999999;
                     self.background.doLogin(item, VERY_LARGE_TAB_NUMBER);
@@ -456,7 +456,7 @@ Client.prototype.initApiCalls = function() {
  * The function replaces every callback
  * identification string among the arguments
  * with the function sending the appropriate response
- * 
+ *
  * @param {Object} message
  */
 Client.prototype.processCallbacks = function(message) {
@@ -472,7 +472,7 @@ Client.prototype.processCallbacks = function(message) {
                 });
             };
     };
-    
+
     for (var i=0; i<args.length; i++) {
         if (typeof(args[i]) === 'string' && args[i].indexOf('_callback_') === 0) {
             args[i] = argFunction();
@@ -485,7 +485,7 @@ Client.prototype.processCallbacks = function(message) {
 
 /**
  * Sets up the remote call method
- * 
+ *
  * @param {string} to the remote calls destination address
  * @param {string} methodName
  */
@@ -498,10 +498,10 @@ Client.prototype.setMethod = function(to, methodName) {
     } else {
         this[methodName] = function() {
             var args = Array.prototype.slice.call(arguments);
-            
+
             // here we keep the callback functions to use on response
             var callbacks = [];
-    
+
             // the code below replaces every callback function among the arguments
             // by the string containing the callback order number.
             // This string will be used to invoke the proper callback on response
@@ -511,18 +511,18 @@ Client.prototype.setMethod = function(to, methodName) {
                     args[i] = '_callback_' + (callbacks.length - 1);
                 }
             }
-            
+
             /**
              * Invokes the right callback on response
-             * 
+             *
              * @param {Object} message the response message
              */
             var invoke_callback = function(message) {
                 callbacks[message.data.callback](message.data.data);
             };
-            
+
             var message = that.composeMessage(to, methodName, args);
-            
+
             that.sendMessage(message, invoke_callback);
         };
     }
@@ -531,7 +531,7 @@ Client.prototype.setMethod = function(to, methodName) {
 
 /**
  * Sets up the bunch of remote call methods
- * 
+ *
  * @param to {string} remote script address
  * @param methods {array} the desired methods names
  */
@@ -545,11 +545,11 @@ Client.prototype.initRemoteCalls = function(to, methods) {
 /**
  * Converts the given plain value (if it is so)
  * into one element array or returns the value unchanged
- * 
+ *
  * This function is used to avoid checking
  * if the argument is an array or a single value
  * in every function accepting both types of values.
- * 
+ *
  * @param value {*}
  * @returns {!Array}
  * TODO(ivan): implement the more explicit array check
@@ -572,7 +572,7 @@ Client.prototype.forceArray = function(value) {
 /**
  * Returns true if the user is logged in of false if not
  * @returns {boolean}
- * 
+ *
  * TODO(ivan): this needs to be reimplemented
  */
 Client.prototype.isLoggedIn = function() {
@@ -588,16 +588,16 @@ Client.prototype.isLoggedIn = function() {
 /**
  * Sets up the remote calls execution
  * for the given method names.
- * 
+ *
  * The method names, requiring the user to be logged in,
  * are passed separately. The isLoggedIn check
  * will be performed before executing those methods.
- * 
+ *
  * @param {string|!Array.<string>} from remote caller address
  * @param {string|!Array.<string>} methods
  * @param {Object=} self (optional) the top level object which methods are to be executed remotely
  * The window object will be used if no self object provided
- * 
+ *
  * TODO(ivan): interchange the methods_login_required and methods_no_login_required order
  * for more convenient usage.
  */
@@ -605,10 +605,10 @@ Client.prototype.initRemoteExecution = function(from, methods, self) {
     var _self = self ? self : window;
     methods = this.forceArray(methods);
     from = this.forceArray(from);
-    
+
     for (var i = 0; i < methods.length; ++i) {
         if (!_self[methods[i]]) {
-            // TODO: throw an exception here? 
+            // TODO: throw an exception here?
             console.log('WARNING: could not initRemoteExecution for method:', methods[i]);
         }
     }
@@ -617,7 +617,7 @@ Client.prototype.initRemoteExecution = function(from, methods, self) {
     this.addListener(from, (function(client) {
         return function(message) {
             var method = message.type;
-            
+
             // return false if the requested method
             // is not in the available methods lists
             if (methods.indexOf(method) === -1) {
@@ -634,7 +634,7 @@ Client.prototype.initRemoteExecution = function(from, methods, self) {
             // replacing every callback identifying string
             // by the function sending the appropriate response
             var args = clientSelf.processCallbacks(message);
-            
+
             // invoking the requested method
             _self[method].apply(null, args);
             return true;
@@ -648,4 +648,6 @@ Client.prototype.initRemoteExecution = function(from, methods, self) {
  */
 if (typeof(exports) !== 'undefined') {
     exports.Client = Client;
+} else if(typeof module !== 'undefined' && module.exports) {
+    module.exports = Client;
 }
