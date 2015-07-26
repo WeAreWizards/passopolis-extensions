@@ -396,7 +396,7 @@ var addContextMenu = function() {
     });
     menu = cm.Menu({
         label: "Passopolis",
-        image: DATA_PREFIX + "img/mitro_logo-16.png",
+        image: DATA_PREFIX + "img/passopolis-logo-16.png",
         items: [child],
     	context: cm.SelectionContext()
     });
@@ -679,7 +679,7 @@ if (firefoxVersion >= 30) {
         id: 'mitro-toolbar-button',
         label: 'Passopolis',
         icon: {
-            '16': data.url('img/mitro_logo_gray-32.png')
+            '16': data.url('img/passopolis-logged-out-32.png')
         },
         onChange: onToolbarButtonToggled
     });
