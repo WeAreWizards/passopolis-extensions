@@ -360,13 +360,13 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
 
     // Listen for initial messages only on mitro.co and localhost
     // the regexp matches mitro.co, foo.mitro.co, but not foomitro.co or mitro.com
-    if (window.location.hostname.match(/(^|\.)mitro\.co$/) ||
+    if (window.location.hostname.match(/(^|\.)passopolis\.com$/) ||
             (debugMode && (window.location.hostname === 'localhost'))) {
         cs.activatePageMessages(client);
 
         // Convert the 'get started' button into a 'sign in' button.
         $(function() {
-            if (window.location.hostname.match(/(^|\.)mitro\.co$/) ||
+            if (window.location.hostname.match(/(^|\.)passopolis\.com$/) ||
                     (debugMode && (window.location.hostname === 'localhost'))) {
                 var $signinButton = $('#signin-button');
                 if ($signinButton.length > 0) {
@@ -381,7 +381,7 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
             }
         });
 
-        if (window.location.hostname.match(/(^|\.)mitro\.co$/)) {
+        if (window.location.hostname.match(/(^|\.)passopolis\.com$/)) {
             // TODO: Remove /static/html version once deployed
             var REMOTE_SERVICES_PATHS = {'/extension_services.html': true};
             var REMOTE_ADMIN_SYNC_PATH = '/extension_admin_sync.html';
@@ -393,7 +393,7 @@ var FRAME_ID = IS_TOP_FRAME ? '' : randomString(20);
                 helper.redirectTo(redirectUrl);
             }
 
-            if ((path in REMOTE_SERVICES_PATHS) || (window.location.href.match('^https://www[.]mitro[.]co/$'))) {
+            if ((path in REMOTE_SERVICES_PATHS) || (window.location.href.match('^https://www[.]passopolis[.]com/$'))) {
                 helper.redirectTo(helper.getURL(SERVICES_PATH));
             }
 
