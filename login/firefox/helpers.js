@@ -37,7 +37,7 @@ var getURL = function(path){
 function BackgroundHelper() {
     var _self = this;
     this.getURL = getURL;
-    
+
     var storage = {
         get: function(key, callback){
             _self.main.storageGet(key, callback);
@@ -53,12 +53,12 @@ function BackgroundHelper() {
             _self.main.storageRemove(keys);
         }
     };
-    
+
     this.storage = {
         sync: storage,
         local: storage
     };
-  
+
     this.ajax = function(params) {
         _self.main.ajax(params, params.complete);
     };
@@ -68,15 +68,15 @@ function BackgroundHelper() {
             _self.main.cookiesGet(params, callback);
         }
     };
-    
+
     this.setIcon = function(icons){
         _self.main.setIcon(icons);
     };
-  
+
     this.hidePopup = function() {
         _self.main.hidePopup();
     };
-  
+
     this.tabs = {
         onUpdated: function(listener){
             self.port.on('tab_updated', function(tabId){
@@ -115,36 +115,36 @@ function BackgroundHelper() {
             _self.main.setTabUrl(tabId, url);
         }
     };
-  
+
     this.setPopupHeight = function(newHeight){
         _self.main.setPopupHeight(newHeight);
     };
-    
+
     this.getClientIdentifier = function(){
         return 'extension:[' + self.options.ID + ',' + self.options.VERSION +']';
     };
-    
+
     this.addContextMenu = function() {
         _self.main.addContextMenu();
     };
-    
+
     this.removeContextMenu = function() {
         _self.main.removeContextMenu();
     };
-    
+
     this.bindClient = function(client){
         self.on('message', function(message){
             message.sendResponse = function(data){
                 var newMessage = client.composeResponse(this, data);
                 client.sendMessage(newMessage);
             };
-            
+
             client.processIncoming(message);
         });
         client.addSender(['main', 'extension', 'content', 'page'], function(message) {
             self.postMessage(message);
         });
-        
+
         client.initRemoteCalls('main', [
             'storageGet', 'storageSet', 'storageRemove', 'ajax', 'cookiesGet',
             'setIcon', 'hidePopup', 'tabsSendMessage', 'setPopupHeight',
@@ -156,9 +156,9 @@ function BackgroundHelper() {
 
 function ExtensionHelper() {
     var _self = this;
-    
+
     this.getURL = getURL;
-    
+
     this.tabs = {
         create: function(params, callback){
             if (typeof(callback) !== 'undefined') {
@@ -174,7 +174,7 @@ function ExtensionHelper() {
             _self.background.getAllTabs(callback);
         }
     };
-    
+
     this.copyFromInput = function ($element, callback) {
         $element.select();
         var value = $element.val();
@@ -183,16 +183,16 @@ function ExtensionHelper() {
         } else {
             _self.main.clipboardSet(value);
         }
-        
+
     };
-  
+
     this.runPopupActions = function() {
         $('body').resize(function() {
             _self.background.setPopupHeight($('body').height());
         });
-        
+
         $('body').resize();
-        
+
         $('a').click(function() {
             var new_href = $(this).attr('href');
             if(['popup.html', 'signup.html', 'change_password.html'].indexOf(new_href) === -1 &&
@@ -201,7 +201,7 @@ function ExtensionHelper() {
             }
         });
     };
-    
+
     this.setLocation = function(path){
         unsafeWindow.location = path;
     };
@@ -231,24 +231,24 @@ function ExtensionHelper() {
       self.port.on('popuphidden', callbackWrapper);
       window.onblur = callbackWrapper;
     };
-    
+
     this.bindClient = function(client){
         self.on('message', function(message) {
             client.processIncoming(message);
         });
         client.addSender(['background', 'main'], function(message){
-            self.postMessage(message);
+            self.postMessage(message, "*");
         });
-        
+
         client.initRemoteCalls('main', ['createTab', 'clipboardSet']);
-        
+
         this.background = this.main = client; // the aliases
     };
 }
 
 function ContentHelper() {
     var _self = this;
-    
+
     this.getURL = getURL;
 
     // content scripts are unable to change window.location to a resource url on FF
@@ -280,7 +280,7 @@ function ContentHelper() {
 
         client.initRemoteCalls('background', ['createTab']);
         client.initRemoteCalls('main', ['redirectActiveTab']);
-        
+
         this.background = client;
     };
 }
