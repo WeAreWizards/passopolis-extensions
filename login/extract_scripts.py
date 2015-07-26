@@ -31,7 +31,7 @@ by the given output path. Saves the scripts-to-file mapping as json
 in the output file's dir.
 
 To collect scripts to separate json files for every html file use:
-./extract_scripts.py extract input_file_path output_file_path 
+./extract_scripts.py extract input_file_path output_file_path
 
 To join previously collected file into a single json dictionary use:
 ./extract_scripts.py collect build_dir_path
@@ -60,23 +60,23 @@ def extract_scripts(input_path, output_path):
     input_file_name = os.path.basename(output_path)
     # json file containing page scripts
     scripts_file_path = os.path.join(SCRIPTS_DIR, '%s%s' % (input_file_name, JSON_EXT))
-    
+
     # create scripts directory if not exists
     if not os.path.exists(SCRIPTS_DIR):
         os.makedirs(SCRIPTS_DIR)
-    
+
     temp_filename = comp.make_temp_filename()
-    
+
     #with open(temp_filename, 'w') as tempfile, \
     #     open(input_path) as input_file, \
     #     open(output_path, 'w') as output_file:
     with contextlib.nested(open(temp_filename, 'w'), open(input_path), open(output_path, 'w')) as (tempfile, input_file, output_file):
 
         html_source = input_file.read()
-        
+
         scripts = re.findall('<script [^>]*?src=["\'](.*?)[\'"]', html_source)
-        
-        # remove relative '../' from scripts paths 
+
+        # remove relative '../' from scripts paths
         for i, val in enumerate(scripts):
             scripts[i] = re.subn(r'^../', '', val)[0]
 
@@ -84,25 +84,28 @@ def extract_scripts(input_path, output_path):
         tempfile.close()
         # this works for cross-device links as well
         shutil.move(temp_filename, scripts_file_path)
-          
+
         # remove script tags
         res_html = re.subn(r'<(script).*?</\1>(?s)', '', html_source)[0]
         # remove empty lines
         res_html = '\n'.join([line for line in iter(res_html.splitlines()) if line.strip()])
-        
+
         output_file.write(res_html)
 
 
 def collect_scripts(build_dir):
-    # html files directory 
+    # html files directory
     htmls_dir = os.path.join(build_dir, HTMLS_DIR_NAME)
     # the resulting json dict containing all scripts for all pages
     mapping_file_path = os.path.join(htmls_dir, MAPPING_FILE_NAME)
     # the dictionary that will be serialized to resulting json
     mapping_dict = {}
-    
+
     with open(mapping_file_path, 'w') as mapping_file:
         # process every single page scripts json files one by one
+        if not os.listdir(SCRIPTS_DIR):
+            raise Exception("No files found in {}".format(SCRIPTS_DIR))
+
         for file_name in os.listdir(SCRIPTS_DIR):
             # just in case
             if file_name.endswith(JSON_EXT):
