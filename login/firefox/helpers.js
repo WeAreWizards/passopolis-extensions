@@ -24,7 +24,7 @@
  * *****************************************************************************
  */
 
-var DATA_PATH = 'resource://mitro-login-manager-at-jetpack/mitro-login-manager/data/';
+var DATA_PATH = 'resource://passopolis-secret-manager-at-jetpack/passopolis-secret-manager/data/';
 
 var getExtensionId = function() {
     return EXTENSION_ID;

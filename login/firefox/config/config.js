@@ -25,4 +25,4 @@
  */
 
 FIREFOX = true;
-var EXTENSION_ID = 'mitro-login-manager';
+var EXTENSION_ID = 'passopolis-secret-manager';
