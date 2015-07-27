@@ -51,6 +51,12 @@ function handleFileSelect(evt) {
   passwords = [];
 }
 
+function _hostname(data) {
+  var el = document.createElement('a');
+  el.href = data;
+  return el.hostname;
+}
+
 function parseCSV(csvText) {
   try {
     $("#password-list").empty();
@@ -59,7 +65,7 @@ function parseCSV(csvText) {
     var objects = $.csv.toObjects(csvText);
     var rval = [];
     for (var i = 0; i < objects.length; ++i) {
-      var title = objects[i].name;
+      var title = objects[i].name || _hostname(objects[i].url);
       if (objects[i].grouping) {
         title += ' [' + objects[i].grouping + ']';
       }
