@@ -2,7 +2,7 @@
   "name": "Passopolis Login Manager",
   "short_name": "Passopolis",
   "manifest_version": 2,
-  "version": "2015.7.18",
+  "version": "2015.7.27",
   "background": {
     "scripts": []
   },
