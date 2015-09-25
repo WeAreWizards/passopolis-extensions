@@ -31,7 +31,7 @@ var fe = require('./mitro_fe');
 var lib = require('./mitro_lib');
 var log = require('./logging');
 
-var host = 'localhost';
+var host = '127.0.0.1';
 var port = 8443;
 console.log('capturing logs ...');
 log.stopCapturingLogsToBuffer();

@@ -27,7 +27,7 @@
 /** @suppress {duplicate} */
 var mitro = mitro || {};
 /** @suppress {duplicate} */
-var kew = kew || require('../../../../api/js/cli/kew');
+var kew = kew || require('../../../client/kew');
 /** @suppress{duplicate} */
 var dictValues = dictValues || require('../../../common/utils').dictValues;
 
