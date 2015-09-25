@@ -1,0 +1,10 @@
+{
+  "name": "mitro-cli",
+  "version": "1.0.0",
+  "description": "Mitro javascript cli dependencies only used for nix test suites",
+  "author": "Passopolis <team@passopolis.com>",
+  "dependencies": {
+    "jasmine-node": "*",
+    "webworker-threads": "*"
+  }
+}

@@ -27,7 +27,7 @@
 /** @suppress {duplicate} */
 var background = background || null;
 /** @suppress {duplicate} */
-var kew = kew || require('../../../../api/js/cli/kew');
+var kew = kew || require('../../../client/kew');
 
 var exportsecrets = {};
 (function() {

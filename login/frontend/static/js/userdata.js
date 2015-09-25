@@ -27,7 +27,7 @@
 /** @suppress{duplicate} */
 var mitro = mitro || {};
 /** @suppress {duplicate} */
-var kew = kew || require('../../../../api/js/cli/kew');
+var kew = kew || require('../../../client/kew');
 // HACK to merge org-info in Node
 (function(){
   if (!('loadOrganizationInfo' in mitro)) {
