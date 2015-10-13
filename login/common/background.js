@@ -539,6 +539,10 @@ client.addListener(['content', 'extension'], function (message) {
     } else if (type === 'saveServiceBlacklisted') {
         delete formRecorder[sender.id];
         addSiteToSaveBlacklist(data.before_page);
+    } else if (type === 'getLoginState') {
+        getLoginState(function (response_data) {
+            message.sendResponse({data: response_data});
+        }, onError);
     } else if (type === 'formSubmit') {
         console.log('formSubmit');
         var formData = data;
