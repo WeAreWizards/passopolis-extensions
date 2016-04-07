@@ -25,123 +25,143 @@
  */
 
 var helpers_background = {};
-(function() {
+(function(){
 
+var helpers_common;
+if (typeof(module) !== 'undefined') {
+    helpers_common = require('../common/helpers_common');
+} else {
+    helpers_common = window.helpers_common;
+}
+
+var _createMitroTab = function(chromeTab) {
+    var tab = new helpers_common.MitroTab(chromeTab.id);
+    tab.windowId = chromeTab.windowId;
+    tab.index = chromeTab.index;
+    tab.url = chromeTab.url;
+    tab.title = chromeTab.title;
+    return tab;
+};
+
+/** @constructor */
 helpers_background.BackgroundHelper = function() {
-    var _self = this;
     this.getURL = getURL;
-    
-    var storage = {
-        get: function(key, callback){
-            _self.main.storageGet(key, callback);
-        },
-        set: function(data, callback){
-            if (typeof(callback) !== 'undefined') {
-                _self.main.storageSet(data, callback);
-            } else {
-                _self.main.storageSet(data);
+    this.storage = chrome.storage;
+    // TODO tom - sync storage not yet implemented see
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=1213475
+    this.storage_sync = chrome.storage.local;
+    this.ajax = helpers_common.ajax;
+    this.cookies = chrome.cookies;
+    this.setIcon = function(details) {
+        if (details.path) {
+            // Chrome throws an exception if we pass unsupported sizes
+            var newPath = {};
+            if ('19' in details.path) {
+                newPath['19'] = details.path['19'];
             }
-        },
-        remove: function(keys) {
-            _self.main.storageRemove(keys);
+            if ('38' in details.path) {
+                newPath['38'] = details.path['38'];
+            }
+            details.path = newPath;
         }
-    };
-    
-    this.storage = {
-        sync: storage,
-        local: storage
-    };
-  
-    this.ajax = function(params) {
-        _self.main.ajax(params, params.complete);
+        chrome.browserAction.setIcon(details);
     };
 
-    this.cookies = {
-        get: function(params, callback){
-            _self.main.cookiesGet(params, callback);
-        }
-    };
-    
-    this.setIcon = function(icons){
-        _self.main.setIcon(icons);
-    };
-  
-    this.hidePopup = function() {
-        _self.main.hidePopup();
-    };
-  
     this.tabs = {
         onUpdated: function(listener){
-            self.port.on('tab_updated', function(tabId){
+            chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab){
+                if(changeInfo.status === "complete"){
+                    listener(tabId);
+                }
+            });
+        },
+        onRemoved: function(listener){
+            chrome.tabs.onRemoved.addListener(function(tabId, changeInfo, tab){
                 listener(tabId);
             });
         },
         sendMessage: function(tabId, message){
-            _self.main.tabsSendMessage(tabId, message);
+            chrome.tabs.sendMessage(tabId, message);
         },
-        onRemoved: function(listener){
-            self.port.on('tab_removed', function(tabId){
-                listener(tabId);
+        create: chrome.tabs.create,
+        remove: chrome.tabs.remove,
+        getSelected: function(callback) {
+            // Pass null to get selected tab in current window.
+            chrome.tabs.getSelected(null, function(tab) {
+                callback(_createMitroTab(tab));
             });
         },
-        create: function(options, callback){
-            if (typeof(callback) !== 'undefined') {
-                _self.main.createTab(options, callback);
-            } else {
-                _self.main.createTab(options);
-            }
-        },
-        remove: function(tabId, callback) {
-            _self.main.removeTab(tabId, callback);
-        },
-        getSelected: function(callback){
-            _self.main.getSelectedTab(function(tab) {
-                callback(tab);
-            });
-        },
-        getAll: function(callback){
-            _self.main.getAllTabs(function(tabs) {
-                callback(tabs);
+        getAll: function(callback) {
+            // Empty query returns all tabs.
+            chrome.tabs.query({}, function(tabs) {
+                var allTabs = [];
+                for (var i = 0; i < tabs.length; i++) {
+                    allTabs.push(_createMitroTab(tabs[i]));
+                }
+                callback(allTabs);
             });
         },
         setUrl: function(tabId, url) {
-            _self.main.setTabUrl(tabId, url);
+            chrome.tabs.update(tabId, {url: url});
         }
     };
-  
-    this.setPopupHeight = function(newHeight){
-        _self.main.setPopupHeight(newHeight);
-    };
-    
+
     this.getClientIdentifier = function(){
-        return 'extension:[' + self.options.ID + ',' + self.options.VERSION +']';
+        var clientIdentifier;
+        try {
+            clientIdentifier = 'extension:[' + chrome.runtime.id + ',' + chrome.runtime.getManifest().version+']';
+        } catch (e) {
+            console.log('could not read chrome extension info');
+            clientIdentifier = 'unknown';
+        }
+
+        return clientIdentifier;
     };
-    
+
+    /**
+     * Activate context menu features
+     */
     this.addContextMenu = function() {
-        _self.main.addContextMenu();
+        // Create menu group
+        chrome.contextMenus.create({
+            id: 'mitro_context_group',
+            title: 'Passopolis',
+            contexts: ['selection']
+        });
+
+        // Add menu item to save selected text as a secret
+        chrome.contextMenus.create({
+            id: 'save_secret',
+            title: 'Save selection as secure note',
+            contexts: ['selection'],
+            onclick: function() {
+                // Send command to the active tab to copy selected text
+                helper.tabs.getSelected(function(tab) {
+                    helper.tabs.sendMessage(tab.id,
+                            client.composeMessage('content', 'copySelection', {tabUrl: tab.url}));
+                });
+            },
+            parentId: 'mitro_context_group'
+        });
     };
-    
+
+    /**
+     * Deactivate context menu features
+     */
     this.removeContextMenu = function() {
-        _self.main.removeContextMenu();
+        chrome.contextMenus.remove('mitro_context_group');
     };
-    
+
     this.bindClient = function(client){
-        self.on('message', function(message){
+        chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
+            var message = request;
+            message.sender = sender.tab;
             message.sendResponse = function(data){
                 var newMessage = client.composeResponse(this, data);
-                client.sendMessage(newMessage);
+                chrome.tabs.sendMessage(this.sender.id, newMessage);
             };
-            
             client.processIncoming(message);
         });
-        client.addSender(['main', 'extension', 'content', 'page'], self.postMessage);
-        
-        client.initRemoteCalls('main', [
-            'storageGet', 'storageSet', 'storageRemove', 'ajax', 'cookiesGet',
-            'setIcon', 'hidePopup', 'tabsSendMessage', 'setPopupHeight',
-            'createTab', 'getSelectedTab', 'getAllTabs', 'removeTab',
-            'setTabUrl', 'addContextMenu', 'removeContextMenu']);
-        this.main = client;
     };
 };
 

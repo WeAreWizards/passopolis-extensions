@@ -47,6 +47,7 @@ var _createMitroTab = function(chromeTab) {
 helpers_background.BackgroundHelper = function() {
     this.getURL = getURL;
     this.storage = chrome.storage;
+    this.storage_sync = chrome.storage.sync;
     this.ajax = helpers_common.ajax;
     this.cookies = chrome.cookies;
     this.setIcon = function(details) {

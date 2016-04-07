@@ -24,5 +24,4 @@
  * *****************************************************************************
  */
 
-FIREFOX = true;
-var EXTENSION_ID = 'passopolis-secret-manager';
+CHROME = true;

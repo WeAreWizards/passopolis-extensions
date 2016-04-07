@@ -105,13 +105,13 @@ var getServiceInstances = function (host, callback) {
             matches = serviceInstances;
         }
     }
-    
+
     if(typeof(callback) === 'function') callback(matches);
     return matches;
 };
 
 var loadSettings = function () {
-    helper.storage.sync.get('settings', function (items) {
+    helper.storage_sync.get('settings', function (items) {
         if (CHROME && chrome.runtime.lastError) {
             // TODO(ivan): safari and ff implementation
             console.log('error loading settings', chrome.runtime.lastError.message);
@@ -132,7 +132,7 @@ var loadSettingsAsync = function(onSuccess) {
 };
 
 var saveSettingsAsync = function(newSettings, onSuccess, onError) {
-    helper.storage.sync.set({'settings': newSettings}, function () {
+    helper.storage_sync.set({'settings': newSettings}, function () {
         if(CHROME && chrome.runtime.lastError){
             // TODO(ivan): safari and ff implementation
             console.log('error saving settings to storage', chrome.runtime.lastError.message);
@@ -156,7 +156,7 @@ var getDeviceId = function(callback) {
             // items seems to be undefined if chrome.storage fails: generate deviceid anyway!
             items = {};
         }
-        
+
         if (items && items[NEW_DEVICE_ID_KEY]) {
             // we have the new-style key
             callback(items[NEW_DEVICE_ID_KEY]);
@@ -193,8 +193,8 @@ var neverAskToSavePasswords = false;
 var highlightSelectedForms = false;
 // TODO: The blacklist should be stored on Mitro instead of browser storage.
 // The blacklist should per user, not per browser.
-helper.storage.sync.get(null, function(items){
-    if (CHROME && chrome.runtime.lastError) {
+helper.storage_sync.get(null, function(items){
+    if ((CHROME || FIREFOX) && chrome.runtime.lastError) {
         // TODO(ivan): safari and ff implementation
         console.log('error loading blacklist', chrome.runtime.lastError.message);
     }
@@ -222,7 +222,7 @@ var addSiteToSaveBlacklist = function (url) {
     var domain = getCanonicalHost(url);
     saveBlacklist[domain] = 1;
 
-    helper.storage.sync.set({'save_blacklist': saveBlacklist}, function () {
+    helper.storage_sync.set({'save_blacklist': saveBlacklist}, function () {
         if (CHROME && chrome.runtime.lastError) {
             // TODO(ivan): safari and ff implementation
             console.log('error saving blacklist to storage', chrome.runtime.lastError.message);
@@ -324,12 +324,12 @@ var injectSaveDialog = function(tabId) {
 
 };
 helper.tabs.onUpdated(function(tabId) {
-    // This is necessary because the firefox content scripts sometimes aren't 
+    // This is necessary because the firefox content scripts sometimes aren't
     // yet listening for messages even after tab updated is sent, even though
     // their docs claim that this cannot happen.
 
-    // Instead, none of these things should be sent until an init message is sent 
-    // to the background script, but the current helpers API is missing the 
+    // Instead, none of these things should be sent until an init message is sent
+    // to the background script, but the current helpers API is missing the
     // ability to extract the tab ID from inbound messages.
 
     // So, we will do the disgusting thing and wait for "a while".
@@ -432,7 +432,7 @@ var generatePassword = function(data, onSuccess, onError) {
             reqs.symbolSet  = data.passwordReqs.symbolSet  !== undefined ? data.passwordReqs.symbolSet  : reqs.symbolSet ;
         }
         // TODO: potentially load reqs based on data.url
-        
+
         onSuccess(mitro.generatePassword(new RealForge(), reqs));
     } catch (e) {
         console.log(e.message);
@@ -463,7 +463,7 @@ client.addListener(['content', 'extension'], function (message) {
     var type = message.type;
     var sender = message.sender;
     var data = message.data;
-    
+
     console.log('background received message from content script, type:', message.type);
     var onError = function (error) {
         message.sendResponse({error: error});
@@ -552,7 +552,7 @@ client.addListener(['content', 'extension'], function (message) {
         // show the dropdown after a little while: useful for AJAXy forms.
         setTimeout(function() {
             // TODO: this should actually check to ensure that the password field
-            // is not on the page (heuristic for failed logins), 
+            // is not on the page (heuristic for failed logins),
             // but that problem is orthogonal to the ajax form stuff.
             injectSaveDialog(sender.id);
         }, 5000);
@@ -571,7 +571,7 @@ var processAPIMessage = function (message, callback) {
             message.sendResponse({data: response});
         }
     };
-    
+
     var onError = function (error) {
         sendResponse({error: error});
     };
@@ -688,9 +688,9 @@ var SERVER_REJECTS = [
 {   'regex' : '^https://www.budget.com.*',
     'reject' : {
         // login only:
-        'login_submit' : [], 
+        'login_submit' : [],
         'submit' : [], //signup or login
-        'password' : [], 
+        'password' : [],
         'username' : [],
         'form' : [
         [{'attributeName': 'name', 'exactMatch' : 'reservationForm'}]
@@ -713,7 +713,7 @@ var refreshServerHints = function () {
         console.log(e);
         console.log(e.stack);
     } finally {
-        setTimeout(refreshServerHints, 
+        setTimeout(refreshServerHints,
             MIN_REJECTS_REFRESH_MS  + (MAX_REJECTS_REFRESH_MS - MIN_REJECTS_REFRESH_MS) * Math.random());
     }
 };

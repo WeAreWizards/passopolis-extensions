@@ -255,7 +255,7 @@ Client.prototype.dispatchMessage = function (type, data, onSuccess, onError) {
     };
 
     // If running in the background script, call process message directly.
-    if (this.directAccess) {
+  if (this.directAccess) {
         this.background.processAPIMessage(message, responseCallback);
     } else {
         this.sendMessage(message, responseCallback);

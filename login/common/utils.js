@@ -41,6 +41,7 @@ var assert;
 var assertIsNumber;
 var lowercaseCompare;
 var dictValues;
+console.log("dictValues", dictValues);
 var createMapFromArrayOnAttribute;
 var arrayToSet;
 (function () {
@@ -98,7 +99,7 @@ var arrayToSet;
             } else if (object[attr] === null) {
                 throw 'Null key attribute: ' + attr;
             } else if (object[attr] in map) {
-                throw 'Duplicate key attribute: ' + attr; 
+                throw 'Duplicate key attribute: ' + attr;
             }
             map[object[attr]] = object;
         }
@@ -126,3 +127,4 @@ var arrayToSet;
         };
     }
 })();
+console.log("dictValues 2", dictValues);
