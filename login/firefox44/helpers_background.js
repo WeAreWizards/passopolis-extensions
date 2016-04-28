@@ -87,7 +87,7 @@ helpers_background.BackgroundHelper = function() {
         remove: chrome.tabs.remove,
         getSelected: function(callback) {
             // Pass null to get selected tab in current window.
-            chrome.tabs.getSelected(null, function(tab) {
+            chrome.tabs.query({active: true}, function(tab) {
                 callback(_createMitroTab(tab));
             });
         },

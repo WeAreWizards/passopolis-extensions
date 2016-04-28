@@ -46,7 +46,6 @@ function ExtensionHelper() {
         });
     };
 
-
     this.setLocation = function(path){
         window.location = '/html/' + path;
     };

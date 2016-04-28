@@ -99,7 +99,7 @@ var updateLoginState = function () {
 
         background.getServiceInstances(undefined, function(allInstances) {
           // fill up context specific stuff
-          helper.tabs.getSelected(function(tabObject) {
+          helper.tabs.query({active: true}, function(tabObject) {
             if (tabObject &&
                 // this can sometimes run before a user is logged in, so disable that case.
                 background.getServiceInstances) {

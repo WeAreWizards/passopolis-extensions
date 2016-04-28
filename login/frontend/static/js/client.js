@@ -297,7 +297,7 @@ Client.prototype.initApiCalls = function() {
                     var VERY_LARGE_TAB_NUMBER = 999999999;
                     self.background.doLogin(item, VERY_LARGE_TAB_NUMBER);
                 } else {
-                    helper.tabs.getSelected(function(tab) {
+                    helper.query({active: true}, function(tab) {
                         self.background.doLogin(item, tab.index + 1);
                     });
                 }
