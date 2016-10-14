@@ -166,3 +166,5 @@ helpers_background.BackgroundHelper = function() {
 };
 
 })();
+
+module.exports.helpers_background = helpers_background;

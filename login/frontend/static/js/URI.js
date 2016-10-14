@@ -1,11 +1,11 @@
 /*
  * Copyright © 2007 Dominic Mitchell
- * 
+ *
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * Redistributions of source code must retain the above copyright notice,
  * this list of conditions and the following disclaimer.
  * Redistributions in binary form must reproduce the above copyright notice,
@@ -14,7 +14,7 @@
  * Neither the name of the Dominic Mitchell nor the names of its contributors
  * may be used to endorse or promote products derived from this software
  * without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -46,7 +46,7 @@ var URIQuery;
 (function () {
 
     //// HELPER FUNCTIONS /////
-  
+
     // RFC3986 §5.2.3 (Merge Paths)
     function merge(base, rel_path) {
         var dirname = /^(.*)\//;
@@ -122,14 +122,14 @@ var URIQuery;
         // Based on the regex in RFC2396 Appendix B.
         var parser = /^(?:([^:\/?\#]+):)?(?:\/\/([^\/?\#]*))?([^?\#]*)(?:\?([^\#]*))?(?:\#(.*))?/;
         var result = str.match(parser);
-        
+
         // Keep the results in private variables.
         var scheme    = result[1] || null;
         var authority = result[2] || null;
         var path      = result[3] || null;
         var query     = result[4] || null;
         var fragment  = result[5] || null;
-        
+
         // Set up accessors.
         this.getScheme = function () {
             return scheme;
@@ -198,7 +198,7 @@ var URIQuery;
                 target.setAuthority(this.getAuthority());
                 target.setPath(remove_dot_segments(this.getPath()));
                 target.setQuery(this.getQuery());
-            }        
+            }
             else {
                 // XXX Original spec says "if defined and empty"…;
                 if (!this.getPath()) {
@@ -253,10 +253,10 @@ var URIQuery;
         return result;
     };
 
-    
+
     // From http://www.w3.org/TR/html401/interact/forms.html#h-17.13.4.1
     // (application/x-www-form-urlencoded).
-    // 
+    //
     // NB: The user can get this.params and modify it directly.
     URIQuery.prototype.addStringParams = function (sourceString) {
         var kvp = sourceString.split(this.separator);
@@ -293,3 +293,5 @@ var URIQuery;
     };
 
 })();
+
+module.exports = { URI, URIQuery };

@@ -11,6 +11,15 @@ current form. We have a hacked-together shell script that copies a few
 files around and then packs the extension which we will release when
 it's a bit less ugly.
 
+# webpack
+
+I'm in the process of webpack-ifying the extension. To test run:
+
+```
+webpack --watch login/common/background.js /tmp/bg.js
+```
+
+
 # Building & testing the extension for Firefox
 
 ```

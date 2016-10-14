@@ -1,3 +1,4 @@
+/* @flow */
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -827,4 +828,16 @@ var addSecretFromSelection = function(url, text) {
         console.log('ERROR. Something went wrong while saving the secret from selection', err);
     });
     return true;
+};
+
+
+module.exports = {
+  client,
+  serviceInstances,
+  getSiteSecretData,
+  getOrganizationInfo,
+  isLoggedIn,
+  isAttemptingLogin,
+  addSite,
+  editSiteShares,
 };

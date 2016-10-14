@@ -1,3 +1,4 @@
+/* @flow */
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -24,33 +25,22 @@
  * *****************************************************************************
  */
 
-var getCanonicalHost;
-(function () {
-    'use strict';
+getCanonicalHost = function(full_url) {
+  var host = new URI(full_url).getAuthority();
+  if (!host) {
+    return "";
+  }
+  // Cookies are not isolated by port, but the chrome cookies API will not
+  // match the domain if the port is included.
+  var index = host.indexOf(':');
+  if (index !== -1) {
+    host = host.slice(0, index);
+  }
 
-    // From the URL
-    getCanonicalHost = function(full_url) {
-        var host = new URI(full_url).getAuthority();
-        if (!host) {
-          return "";
-        }
-        // Cookies are not isolated by port, but the chrome cookies API will not 
-        // match the domain if the port is included.
-        var index = host.indexOf(':');
-        if (index !== -1) {
-            host = host.slice(0, index);
-        }
+  // TODO: The right way to implement this is using public suffix.
+  //
+  // http://publicsuffix.org
+  return host.substring(0, 4) === 'www.' ? host.substring(4) : host;
+};
 
-        // TODO: The right way to implement this is using public suffix.
-        //
-        // http://publicsuffix.org
-        return host.substring(0, 4) === 'www.' ? host.substring(4) : host;
-    };
-
-    // define node.js module for testing
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports.getCanonicalHost = getCanonicalHost;
-    } else if (typeof(window) !== 'undefined') {
-        window.getCanonicalHost = getCanonicalHost;
-    }
-})();
+module.exports = { getCanonicalHost };

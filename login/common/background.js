@@ -1,3 +1,4 @@
+/* @flow */
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -24,6 +25,12 @@
  * *****************************************************************************
  */
 
+import { helpers_background } from "../firefox44/helpers_background";
+import { client, serviceInstances, getSiteSecretData, getOrganizationInfo, isLoggedIn, isAttemptingLogin, addSite, editSiteShares } from "./background_api";
+import { getCanonicalHost } from "./domain";
+import { forge } from "node-forge";
+import { URI } from "../frontend/static/js/URI";
+import * as password_generator from "../../api/js/cli/password_generator";
 
 /**
  * Setting up the worker, binding the client
@@ -68,7 +75,7 @@ var updateLastUsedServiceForHost = function(service) {
     serviceForHostCache[getCanonicalHost(service.clientData.loginUrl)] = service.secretId;
 };
 
-var getLastUsedServiceForHost = function(canonicalHost) {
+var getLastUsedServiceForHost = function(canonicalHost: string) {
     return serviceForHostCache[canonicalHost];
 };
 
@@ -423,7 +430,7 @@ RealForge.prototype.getRandomByte = function() {
 
 var generatePassword = function(data, onSuccess, onError) {
     try {
-        var reqs = new mitro.PasswordRequirements();
+        var reqs = new password_generator.PasswordRequirements();
         if (data && data.passwordReqs) {
             reqs.numCharacters = data.passwordReqs.numCharacters !== undefined ? data.passwordReqs.numCharacters : reqs.numCharacters;
             reqs.minUppercase = data.passwordReqs.minUppercase !== undefined ? data.passwordReqs.minUppercase : reqs.minUppercase;
@@ -436,7 +443,7 @@ var generatePassword = function(data, onSuccess, onError) {
         }
         // TODO: potentially load reqs based on data.url
 
-        onSuccess(mitro.generatePassword(new RealForge(), reqs));
+        onSuccess(password_generator.generatePassword(new RealForge(), reqs));
     } catch (e) {
         console.log(e.message);
         console.log(e.stack);

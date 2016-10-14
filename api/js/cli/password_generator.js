@@ -24,19 +24,6 @@
  * *****************************************************************************
  */
 
-/** @suppress{duplicate} */
-var mitro = mitro || {};
-(function() {
-
-/**
-@interface
-*/
-mitro.Forge = function() {};
-
-/**
-@return {number}
-*/
-mitro.Forge.prototype.getRandomByte = function() {};
 
 /** @const */
 var UPPERCASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -81,10 +68,10 @@ var getUnbiasedShortUnder = function(forge, under) {
 @constructor
 @struct
 */
-mitro.PasswordRequirements = function() {
+PasswordRequirements = function() {
   /** @type {number} */
   this.numCharacters = 8;
-  
+
   /** @type {number} */
   this.minUppercase = 1;
 
@@ -106,7 +93,7 @@ mitro.PasswordRequirements = function() {
 // TODO: add validation code for pwd reqs.
 
 /** @const */
-var DEFAULT_PASSWORD_REQUIREMENTS = new mitro.PasswordRequirements();
+var DEFAULT_PASSWORD_REQUIREMENTS = new PasswordRequirements();
 /** @const */
 var MIN_CHARACTERS = 5;
 /** @const */
@@ -117,7 +104,7 @@ var INVALID_REQUEST = '';
 @param {mitro.PasswordRequirements=} requirements
 @return {string} password
 */
-mitro.generatePassword = function(forge, requirements) {
+generatePassword = function(forge, requirements) {
 
   var i;
   if (!requirements) {
@@ -135,7 +122,7 @@ mitro.generatePassword = function(forge, requirements) {
   for (i = 0; i < requirements.numCharacters; ++i) {
     buffer.push(LOWERCASE[getUnbiasedShortUnder(forge, LOWERCASE.length)]);
   }
- 
+
 
   // TODO: this currently ignores all max values.
   // keep track of which indexes in the buffer have been replaced.
@@ -168,8 +155,4 @@ mitro.generatePassword = function(forge, requirements) {
   return buffer.join('');
 };
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = mitro;
-}
-
-})();
+module.exports = { PasswordRequirements, generatePassword };
