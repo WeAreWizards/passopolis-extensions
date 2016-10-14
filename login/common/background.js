@@ -191,32 +191,35 @@ var neverAskToSavePasswords = false;
 
 
 var highlightSelectedForms = false;
-// TODO: The blacklist should be stored on Mitro instead of browser storage.
-// The blacklist should per user, not per browser.
-helper.storage_sync.get(null, function(items){
+
+
+var loadBlacklist = function() {
+  // TODO: The blacklist should be stored on Mitro instead of browser storage.
+  // The blacklist should per user, not per browser.
+  helper.storage_sync.get(null, function(items) {
     if ((CHROME || FIREFOX) && chrome.runtime.lastError) {
-        // TODO(ivan): safari and ff implementation
-        console.log('error loading blacklist', chrome.runtime.lastError.message);
+      // TODO(ivan): safari and ff implementation
+      console.log('error loading blacklist', chrome.runtime.lastError.message);
     }
     if ('save_blacklist' in items) {
-        console.log('blacklist loaded');
-        saveBlacklist = items.save_blacklist;
+      console.log('blacklist loaded');
+      saveBlacklist = items.save_blacklist;
     }
     if ('highlightSelectedForms' in items) {
-        highlightSelectedForms = items.highlightSelectedForms;
+      highlightSelectedForms = items.highlightSelectedForms;
     }
     if (items.hideNotLoggedInOnLoginPages) {
-        hideNotLoggedInOnLoginPages = true;
+      hideNotLoggedInOnLoginPages = true;
     }
-
     if (items.neverAskToSavePasswords) {
-        neverAskToSavePasswords = true;
+      neverAskToSavePasswords = true;
     }
-
     if (items.serverHostnameOverride) {
-        MITRO_HOST = items.serverHostnameOverride;
+      MITRO_HOST = items.serverHostnameOverride;
     }
-});
+  });
+};
+
 
 var addSiteToSaveBlacklist = function (url) {
     var domain = getCanonicalHost(url);
@@ -641,6 +644,7 @@ setInterval(listUsersGroupsAndSecrets, SERVICE_LIST_REFRESH_PERIOD);
 
 updateIconState();
 loadSettings();
+loadBlacklist();
 
 
 // do this every 1 to 2 hours
