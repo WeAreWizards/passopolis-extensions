@@ -103,10 +103,8 @@ var Client = function(address) {
      * before getting to their destinations.
      */
     this.processIncoming = function(message) {
-        if (message.type != 'console_log') {
-            console.log(this.address + ' has got ' + (message.response ? 'response' : 'message') +
+        console.log(this.address + ' has got ' + (message.response ? 'response' : 'message') +
                     ' "' + message.type + '" from ' + message.from);
-        }
 
         // try to handle the message if the message.to addrespos
         // matches the client address (means the message has come
@@ -624,9 +622,7 @@ Client.prototype.initRemoteExecution = function(from, methods, self) {
                 return false;
             }
 
-            if (method != 'console_log') {
-                console.log('< remote_call > ' + method);
-            }
+            console.log('< remote_call > ' + method);
             if (!_self[method]) {
                 console.log('unknown method' + method);
                 return false;
