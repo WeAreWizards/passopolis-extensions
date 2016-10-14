@@ -41,9 +41,9 @@ var assert;
 var assertIsNumber;
 var lowercaseCompare;
 var dictValues;
-console.log("dictValues", dictValues);
 var createMapFromArrayOnAttribute;
 var arrayToSet;
+
 (function () {
     'use strict';
 
@@ -59,6 +59,8 @@ var arrayToSet;
             throw message;
         }
     };
+    // TODO fix terrible way of passing library functions around.
+    window.assert = assert;
 
     /**
     @param {number} number
@@ -127,4 +129,3 @@ var arrayToSet;
         };
     }
 })();
-console.log("dictValues 2", dictValues);
