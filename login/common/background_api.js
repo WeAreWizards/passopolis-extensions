@@ -25,11 +25,78 @@
  * *****************************************************************************
  */
 
-var keycache = mitro.keycache.MakeKeyCache();
-mitro.keycache.startFiller(keycache);
+import { keycache } from "../../api/js/cli/keycache";
+import { _PostToMitro } from "../../api/js/cli/rpc";
+import { forge } from "node-forge";
+import { Client } from "../frontend/static/js/client";
+import { jQuery } from "jQuery";
+import { getExtensionId } from "./worker";
+import { assert } from "./utils";
+import { getCanonicalHost } from "./domain";
+import { helpers_background } from "../firefox44/helpers_background";
+import { getLoginHintsForHost } from "./service_cache";
+import { saveSettingsAsync } from "./settings";
+import { clearRecordedForms } from "./form_handling";
 
-var getNewRSAKeysAsync = function(numKeys, onSuccess, onError) {
-    keycache.getNewRSAKeysAsync(numKeys, function(keys) {
+const keycacheI = keycache.MakeKeyCache();
+keycache.startFiller(keycache);
+
+type Identity = {
+  uid: string,
+  changePwd: boolean,
+};
+
+type LoginState = {
+};
+
+type SecretData = {
+  secretId: SecretId;
+  groupIds: Array<GroupId>;
+  serverData: {
+    loginUrl: string;
+  };
+  clientData: {};
+  secretData: {};
+};
+
+type LoginData = {
+  before_page: string;
+  usernameField: HTMLInputElement;
+  passwordField: HTMLInputElement;
+};
+
+type SecretId = string;
+type GroupId = number;
+
+type SiteData = {
+  secretId: SecretId;
+  groupIdList: Array<GroupId>;
+  identityList: Array<Identity>;
+  orgGroupId: GroupId;
+};
+
+type GroupData = {
+  groupId: GroupId;
+  name: string;
+  groupIdList: Array<GroupId>;
+  identityList: Array<Identity>;
+};
+
+type Issue = {
+  logs: string;
+};
+
+type GetAuditLog = {};
+type AuditLog = {};
+type CreateOrganization = {};
+type GetOrganization = {}
+type OrgInfo = {};
+type OrganizationId = number;
+type MutateOrganization = {};
+type ChangeRemotePassword = {};
+
+const getNewRSAKeysAsync = function(numKeys, onSuccess, onError) {
+    keycacheI.getNewRSAKeysAsync(numKeys, function(keys) {
         var rval = [];
         for (var i = 0; i < keys.length; ++i) {
             rval.push(keys[i].toJson());
@@ -51,13 +118,14 @@ var getRandomness = function(onSuccess, onError) {
     }
 };
 
-var client = new Client('background');
+const client = new Client('background');
+const worker = new Worker('worker.js');
+const helper = new helpers_background.BackgroundHelper();
 
-// we have to use unsafeWindow in firefox
-var _Worker = typeof(unsafeWindow) !== 'undefined' ? unsafeWindow.Worker : Worker;
+helper.bindClient(client); // TODO what does this so?
 
-var worker = new _Worker('worker.js');
-worker.addEventListener('message', function(event) {
+
+worker.onmessage = function(event: MessageEvent) {
     // make a deep copy of message
     var message = jQuery.extend(true, {}, event.data);
 
@@ -66,12 +134,14 @@ worker.addEventListener('message', function(event) {
         worker.postMessage(new_message);
     };
     client.processIncoming(message);
-});
-client.addSender('worker', function(message){
+};
+
+client.addSender('worker', function(message) {
     worker.postMessage(message);
 });
 
-var ajax = mitro.rpc._PostToMitro;
+
+var ajax = _PostToMitro; // TODO: This re-assignment seems silly - why not use the correct name?
 
 
 client.initRemoteCalls('worker', [
@@ -85,13 +155,10 @@ client.initRemoteCalls('worker', [
 client.initRemoteExecution('worker', ['getNewRSAKeysAsync', 'console_log', 'ajax', 'getRandomness'], this);
 client.setExtensionId(getExtensionId());
 
-// try to catch loading things in the incorrect order
-assert(mitro.fe);
 
-mitro.fe = client;
-var fe = mitro.fe;
-
-var userIdentity = null;
+var fe = client;
+var frontend = client;
+var userIdentity: ?Identity = null;
 var attemptingLogin = false;
 
 // used in background.js by the popup (and maybe by the infobar?)
@@ -102,19 +169,20 @@ var clearPasswordCallbackId = null;
 
 var selectedOrgId = null;
 
-var reportError = function (onError, message) {
-    console.log(message);
-    if (typeof onError !== 'undefined') {
-        onError(message);
-    }
+type ErrorCallback = (message: Error) => void;
+
+var reportError = function (onError: ErrorCallback, message: string) {
+  console.log(message);
+  if (onError === undefined || onError == null) { return };
+  onError(new Error(message));
 };
 
 var checkTwoFactor = function (onSuccess, onError) {
-	fe.workerInvokeOnIdentity(userIdentity, 'checkTwoFactor', onSuccess, onError);
+  fe.workerInvokeOnIdentity(userIdentity, 'checkTwoFactor', onSuccess, onError);
 };
 
-var reportSuccess = function (onSuccess, arg) {
-    if (typeof onSuccess !== 'undefined') {
+var reportSuccess = function (onSuccess: ?(arg: any) => void, arg: ?mixed) {
+    if (onSuccess !== undefined && onSuccess !== null) {
         onSuccess(arg);
     }
 };
@@ -150,7 +218,7 @@ var saveLoginToken = function(identity) {
     });
 };
 
-var getLoginToken = function(email, callback) {
+var getLoginToken = function(email: string, callback: (token: string) => void) {
     var key = 'loginToken:' + email;
     helper.storage.local.get(key, function(r) {
         var token = r;
@@ -173,18 +241,21 @@ var getLoginToken = function(email, callback) {
 
 // This method saves an encrypted key for a specific user id.
 // If the uid is null, it clears the last saved key (used for logout).
-var saveEncryptedKey = function(uid, keystring) {
-    var value = uid ? {key:keystring, uid:uid} : null;
-    helper.storage.local.set({'encryptedKey':value}, function() {
-        if (CHROME && chrome.runtime.lastError) {
-            // TODO(ivan): safari and ff implementation
-            console.log('error storing encrypted key: ' + chrome.runtime.lastError.message);
-        }
-    });
+var saveEncryptedKey = function(uid: ?string, keystring: ?string) {
+  // TODO(tom): instead of clearing by setting to null we should have a
+  // `clearEncryptedKey` function.
+
+  const value = uid ? {key:keystring, uid:uid} : null;
+  helper.storage.local.set({'encryptedKey':value}, function() {
+    if (CHROME && chrome.runtime.lastError) {
+      // TODO(ivan): safari and ff implementation
+      console.log('error storing encrypted key: ' + chrome.runtime.lastError.message);
+    }
+  });
 };
 
 var pregenerateKeys = function(num, callback) {
-    keycache.setTemporaryLimit(num, callback);
+    keycacheI.setTemporaryLimit(num, callback);
 };
 client.initRemoteExecution('extension', 'pregenerateKeys');
 
@@ -206,7 +277,7 @@ var commitPendingGroupDiffs = function(identity, nonce, checksum, onSuccess, onE
 };
 client.initRemoteExecution('extension', 'commitPendingGroupDiffs');
 
-var loadEncryptedKey = function(callback) {
+var loadEncryptedKey = function(callback: (keyUid: ?string) => void) {
     var key = 'encryptedKey';
     helper.storage.local.get(key, function(items) {
         if (CHROME && chrome.runtime.lastError) {
@@ -260,7 +331,7 @@ var mitroSignup = function (username, password, rememberMe, onSuccess, onError) 
     });
 };
 
-var commonOnLoginCode = function(identity, rememberMe, onSuccess, onError) {
+var commonOnLoginCode = function(identity: Identity, rememberMe: boolean, onSuccess: () => void, onError: (error: Error) => void) {
     console.log('onLogin: ', identity.uid);
     attemptingLogin = false;
     if (isLoggedIn()) {
@@ -341,7 +412,7 @@ var mitroLogin = function (username, password, onSuccess, onError, onTwoFactorAu
     }
 };
 
-var mitroLogout = function (onSuccess, onError) {
+var mitroLogout = function (onSuccess: () => void, onError: (arg: any) => void) {
     console.log('mitroLogout');
 
     // This will clear the state in the worker
@@ -352,10 +423,7 @@ var mitroLogout = function (onSuccess, onError) {
     saveEncryptedKey(null, null);
     serviceInstances = null;
     selectedOrgId = null;
-    // these variables no longer exist
-    // pendingRequests = {};
-    // partialFormRecorder = {};
-    formRecorder = {};
+    clearRecordedForms();
 
     helper.removeContextMenu();
 
@@ -372,33 +440,41 @@ var isAttemptingLogin = function () {
 };
 
 var changePassword = function (oldPassword, newPassword, up, onSuccess, onError) {
-    if (!isLoggedIn() || up.token === null || up.token_signature === null) {
-        reportError(onError, 'Cannot change password; not logged in');
-        return;
-    }
+  if (!isLoggedIn() || up.token === null || up.token_signature === null) {
+    reportError(onError, 'Cannot change password; not logged in');
+    return;
+  }
 
-    var onMutatePrivateKeyPassword = function (response) {
-        // clear the "must change password" flag: we just did!
-        // TODO: reload the identity to ensure the server cleared this flag?
-        userIdentity.changePwd = false;
-        reportSuccess(onSuccess, response);
-    };
-
-    var onMutatePrivateKeyPasswordError = function (error) {
-        reportError(onError, 'Error changing password: ' + error.userVisibleError);
-    };
-    if (oldPassword === null) {
-        fe.workerInvokeOnIdentity(userIdentity, 'mutatePrivateKeyPasswordWithoutOldPassword', {newPassword:newPassword, up:up}, onMutatePrivateKeyPassword, onMutatePrivateKeyPasswordError);
-    } else {
-        fe.workerInvokeOnIdentity(userIdentity, 'mutatePrivateKeyPassword', oldPassword, newPassword, up, onMutatePrivateKeyPassword, onMutatePrivateKeyPasswordError);
+  var onMutatePrivateKeyPassword = function (response) {
+    // clear the "must change password" flag: we just did!
+    // TODO: reload the identity to ensure the server cleared this flag?
+    if (userIdentity === null || userIdentity === undefined) {
+      console.error("trying to change password without userIdentity");
+      return;
     }
+    userIdentity.changePwd = false;
+    reportSuccess(onSuccess, response);
+  };
+
+  var onMutatePrivateKeyPasswordError = function (error) {
+    reportError(onError, 'Error changing password: ' + error.userVisibleError);
+  };
+  if (oldPassword === null) {
+    fe.workerInvokeOnIdentity(
+      userIdentity, 'mutatePrivateKeyPasswordWithoutOldPassword',
+      {newPassword:newPassword, up:up}, onMutatePrivateKeyPassword, onMutatePrivateKeyPasswordError);
+  } else {
+    fe.workerInvokeOnIdentity(
+      userIdentity, 'mutatePrivateKeyPassword', oldPassword, newPassword,
+      up, onMutatePrivateKeyPassword, onMutatePrivateKeyPasswordError);
+  }
 };
 
-var getIdentity = function (onSuccess, onError) {
+var getIdentity = function (onSuccess: (identity: Identity) => void, onError: ErrorCallback) {
     reportSuccess(onSuccess, userIdentity);
 };
 
-var getLoginState = function (onSuccess, onError) {
+var getLoginState = function (onSuccess: (loginState: LoginState) => void, onError: ErrorCallback) {
   var result = {
     identity: userIdentity,
     attemptingLogin: attemptingLogin
@@ -423,7 +499,7 @@ var setIdentity = function (identity) {
     updateIconState();
 };
 
-var listUsersGroupsAndSecrets = function (onSuccess, onError) {
+var listUsersGroupsAndSecrets = function (onSuccess: () => void, onError: ErrorCallback) {
     console.log('trying to fetch services from ' + MITRO_HOST + '...');
 
     if (!isLoggedIn()) {
@@ -465,15 +541,17 @@ var internalGetSiteSecretData = function (fcn, secretId, onSuccess, onError) {
 
     fe.workerInvokeOnIdentity(userIdentity, fcn, secretId, onGetSiteSecretData, onGetSiteSecretDataError);
 };
-var getSiteSecretData = function (secretId, onSuccess, onError) {
+
+var getSiteSecretData = function (secretId: SecretId, onSuccess: (data: number) => void, onError: ErrorCallback) {
     return internalGetSiteSecretData('getSiteSecretData', secretId, onSuccess, onError);
 };
-var getSiteSecretDataForDisplay = function (secretId, onSuccess, onError) {
+
+var getSiteSecretDataForDisplay = function (secretId: SecretId, onSuccess: (data: number) => void, onError: ErrorCallback) {
     return internalGetSiteSecretData('getSiteSecretDataForDisplay', secretId, onSuccess, onError);
 };
 
 
-var addSecretToGroups = function (data, onSuccess, onError) {
+var addSecretToGroups = function (data: SecretData, onSuccess: (secretId: SecretId) => void, onError: ErrorCallback) {
     if (!isLoggedIn()) {
         reportError(onError, 'Not logged in');
         return;
@@ -496,7 +574,7 @@ var addSecretToGroups = function (data, onSuccess, onError) {
 };
 
 
-var addSecret = function (data, onSuccess, onError) {
+var addSecret = function (data: SecretData, onSuccess: (secretId: SecretId) => void, onError: ErrorCallback) {
     if (!isLoggedIn()) {
         reportError(onError, 'Not logged in');
         return;
@@ -522,7 +600,8 @@ var addSecret = function (data, onSuccess, onError) {
 
     fe.workerInvokeOnIdentity(userIdentity, 'addSecret', loginUrl, clientData, secretData, onAddSecret, onAddSecretError);
 };
-var editSecret = function (data, onSuccess, onError) {
+
+var editSecret = function (data: SecretData, onSuccess: (secretId: SecretId) => void, onError: ErrorCallback) {
     if (!isLoggedIn()) {
         reportError(onError, 'Not logged in');
         return;
@@ -541,7 +620,7 @@ var editSecret = function (data, onSuccess, onError) {
                               data.secretData, onEditSecret, onEditSecretError);
 };
 
-var addSite = function (loginData, onSuccess, onError) {
+var addSite = function (loginData: LoginData, onSuccess: (secretId: SecretId) => void , onError: ErrorCallback) {
     if (!isLoggedIn()) {
         reportError(onError, 'Not logged in');
         return;
@@ -570,7 +649,7 @@ var addSite = function (loginData, onSuccess, onError) {
                          onAddSiteError);
 };
 
-var removeSecret = function (secretId, onSuccess, onError) {
+var removeSecret = function (secretId: SecretId, onSuccess: (data: mixed) => void, onError: ErrorCallback) {
     console.log('removeSecret: ' + secretId);
 
     if (!isLoggedIn()) {
@@ -589,7 +668,7 @@ var removeSecret = function (secretId, onSuccess, onError) {
     fe.workerInvokeOnIdentity(userIdentity, 'deleteSecret', secretId, onRemoveSecret, onRemoveSecretError);
 };
 
-var editSiteShares = function (siteData, onSuccess, onError) {
+var editSiteShares = function (siteData: SiteData, onSuccess: (data: mixed) => void, onError: ErrorCallback) {
     var secretId = siteData.secretId;
     var groupIdList = siteData.groupIdList;
     var identityList = siteData.identityList;
@@ -613,7 +692,7 @@ var editSiteShares = function (siteData, onSuccess, onError) {
     fe.workerInvokeOnIdentity(userIdentity, 'shareSiteAndOptionallySetOrg', secretId, groupIdList, identityList, orgGroupId, onShareSite, onShareSiteError);
 };
 
-var getGroup = function (groupId, onSuccess, onError) {
+var getGroup = function (groupId: GroupId, onSuccess: (group: GroupData) => void, onError: ErrorCallback) {
     console.log('getGroup: ' + groupId);
 
     if (!isLoggedIn()) {
@@ -633,7 +712,7 @@ var getGroup = function (groupId, onSuccess, onError) {
     fe.workerInvokeOnIdentity(userIdentity, 'getGroup', groupId, onGetGroup, onGetGroupError);
 };
 
-var addGroup = function (groupName, onSuccess, onError) {
+var addGroup = function (groupName: string, onSuccess: (groupId: GroupId) => void, onError: ErrorCallback) {
     console.log('addGroup: ' + groupName);
 
     if (!isLoggedIn()) {
@@ -653,7 +732,7 @@ var addGroup = function (groupName, onSuccess, onError) {
     fe.workerInvokeOnIdentity(userIdentity, 'addGroup', groupName, onAddGroup, onAddGroupError);
 };
 
-var removeGroup = function (groupId, onSuccess, onError) {
+var removeGroup = function (groupId: GroupId, onSuccess: (groupId: GroupId) => void, onError: ErrorCallback) {
     console.log('removeGroup: ' + groupId);
 
     if (!isLoggedIn()) {
@@ -673,7 +752,7 @@ var removeGroup = function (groupId, onSuccess, onError) {
     fe.workerInvokeOnIdentity(userIdentity, 'removeGroup', groupId, onRemoveGroup, onRemoveGroupError);
 };
 
-var editGroup = function (groupData, onSuccess, onError) {
+var editGroup = function (groupData: GroupData, onSuccess: (groupId: GroupId) => void, onError: ErrorCallback) {
     var groupId = groupData.groupId;
     var groupName = groupData.name;
     var groupIdList = groupData.groupIdList;
@@ -698,10 +777,10 @@ var editGroup = function (groupData, onSuccess, onError) {
     fe.workerInvokeOnIdentity(userIdentity, 'mutateGroup', groupId, groupName, groupIdList, identityList, onMutateGroup, onMutateGroupError);
 };
 
-var addIssue = function (data, onSuccess, onError) {
+var addIssue = function (data: Issue, onSuccess: (data: mixed) => void, onError: ErrorCallback) {
     console.log('addIssue');
 
-    var onAddIssue = function (data) {
+    var onAddIssue = function (data: Issue) {
         console.log('issue reported successfully');
         reportSuccess(onSuccess, data);
     };
@@ -710,11 +789,12 @@ var addIssue = function (data, onSuccess, onError) {
         reportError(onError, 'Error reporting issue: ' + error.userVisibleError);
     };
 
-    data.logs = mitro.log.logBuffer.toString();
+    // TODO(tom) - re-implement a common logging system
+    // data.logs = mitro.log.logBuffer.toString();
     fe.addIssue(data, MITRO_HOST, MITRO_PORT, onAddIssue, onAddIssueError);
 };
 
-var getAuditLog = function (data, onSuccess, onError) {
+var getAuditLog = function (data: GetAuditLog, onSuccess: (auditLog: AuditLog) => void, onError: ErrorCallback) {
     console.log('getAuditLog');
 
     var onGetAuditLog = function (data) {
@@ -729,44 +809,49 @@ var getAuditLog = function (data, onSuccess, onError) {
     fe.workerInvokeOnIdentity(userIdentity, 'getAuditLog', data, onGetAuditLog, onGetAuditLogError);
 };
 
-var createOrganization = function(request, onSuccess, onError) {
+var createOrganization = function(data: CreateOrganization, onSuccess: () => void, onError: ErrorCallback) {
     if (!isLoggedIn()) {
         reportError(onError, 'Not logged in');
         return;
     }
 
-    fe.workerInvokeOnIdentity(userIdentity, 'createOrganization', request, onSuccess, onError);
+    fe.workerInvokeOnIdentity(userIdentity, 'createOrganization', data, onSuccess, onError);
 };
 
-var getOrganizationInfo = function (request, onSuccess, onError) {
-    console.log('getOrganizationInfo');
-    if (!isLoggedIn()) {
-        onError('Not logged in');
-        return;
+var getOrganizationInfo = function (request: GetOrganization, onSuccess: (orgInfo: OrgInfo) => void, onError: ErrorCallback) {
+  console.log('getOrganizationInfo');
+  if (!isLoggedIn()) {
+    onError(new Error('Not logged in'));
+    return;
+  }
+
+  var onGetOrgInfoSuccess = function (orgInfo) {
+    if (selectedOrgId === null) {
+      onError(new Error('No organization selected.'));
+      return;
     }
 
-    var onGetOrgInfoSuccess = function (orgInfo) {
-        if (orgInfo.organizations && selectedOrgId in orgInfo.organizations) {
-            // Replace default org id with selected org id.
-            orgInfo.myOrgId = selectedOrgId;
-        }
-        onSuccess(orgInfo);
-    };
+    if (orgInfo.organizations && selectedOrgId in orgInfo.organizations) {
+      // Replace default org id with selected org id.
+      orgInfo.myOrgId = selectedOrgId;
+    }
+    onSuccess(orgInfo);
+  };
 
-    fe.workerInvokeOnIdentity(userIdentity, 'getOrgInfo', onGetOrgInfoSuccess, onError);
+  fe.workerInvokeOnIdentity(userIdentity, 'getOrgInfo', onGetOrgInfoSuccess, onError);
 };
 
-var getOrganization = function (orgId, onSuccess, onError) {
+var getOrganization = function (orgId: OrganizationId, onSuccess: () => void, onError: ErrorCallback) {
     console.log('getOrganization: ', orgId);
     if (!isLoggedIn()) {
-        onError('Not logged in');
+        onError(new Error('Not logged in'));
         return;
     }
 
     fe.workerInvokeOnIdentity(userIdentity, 'getOrganizationState', orgId, onSuccess, onError);
 };
 
-var selectOrganization = function (orgId, onSuccess, onError) {
+var selectOrganization = function (orgId: OrganizationId, onSuccess: () => void, onError: ErrorCallback) {
     console.log('selectOrganization: ', orgId);
     if (!isLoggedIn()) {
         reportError(onError, 'Not logged in');
@@ -778,25 +863,25 @@ var selectOrganization = function (orgId, onSuccess, onError) {
             selectedOrgId = orgId;
             onSuccess();
         } else {
-            onError({userVisibleError: 'Invalid org id: ' + orgId});
+            onError(new Error({userVisibleError: 'Invalid org id: ' + orgId}));
         }
     };
 
     fe.workerInvokeOnIdentity(userIdentity, 'getOrgInfo', onGetOrgInfoSuccess, onError);
 };
 
-var mutateOrganization = function(request, onSuccess, onError) {
+var mutateOrganization = function(request: MutateOrganization, onSuccess: () => void, onError: ErrorCallback) {
     if (!isLoggedIn()) {
-        onError('Not logged in');
+        onError(new Error('Not logged in'));
         return;
     }
 
     fe.workerInvokeOnIdentity(userIdentity, 'mutateOrganization', request, onSuccess, onError);
 };
 
-var changeRemotePassword = function(request, onSuccess, onError) {
+var changeRemotePassword = function(request: ChangeRemotePassword, onSuccess: () => void, onError: ErrorCallback) {
     if (!isLoggedIn()) {
-        onError('Not logged in');
+        onError(new Error('Not logged in'));
         return;
     }
 
@@ -840,4 +925,33 @@ module.exports = {
   isAttemptingLogin,
   addSite,
   editSiteShares,
+  frontend,
+  userIdentity,
+  reportError,
+  getIdentity,
+  getLoginState,
+  mitroLogout,
+  listUsersGroupsAndSecrets,
+  getSiteSecretDataForDisplay,
+  addSecret,
+  addSecretToGroups,
+  editSecret,
+  removeSecret,
+  getGroup,
+  addGroup,
+  removeGroup,
+  editGroup,
+  addIssue,
+  getAuditLog,
+  createOrganization,
+  getOrganization,
+  selectOrganization,
+  mutateOrganization,
+  changeRemotePassword,
+  updateIconState,
+  loadEncryptedKey,
+  attemptingLogin,
+  saveEncryptedKey,
+  getLoginToken,
+  commonOnLoginCode,
 };

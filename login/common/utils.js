@@ -37,95 +37,82 @@ var KeyCodes = {
     KEY_Z: 90
 };
 
-var assert;
-var assertIsNumber;
-var lowercaseCompare;
 var dictValues;
 var createMapFromArrayOnAttribute;
-var arrayToSet;
 
-(function () {
-    'use strict';
+/**
+   @param {boolean} condition
+   @param {string=} message
+*/
+assert = function(condition, message) {
+  if (!condition) {
+    if (typeof message === 'undefined') {
+      message = 'Assertion failed';
+    }
+    throw message;
+  }
+};
+/**
+   @param {number} number
+*/
+assertIsNumber = function(number) {
+  if (typeof number !== 'number') {
+    throw new Error('argument must be a number');
+  }
+};
 
-    /**
-    @param {boolean} condition
-    @param {string=} message
-    */
-    assert = function(condition, message) {
-        if (!condition) {
-            if (typeof message === 'undefined') {
-                message = 'Assertion failed';
-            }
-            throw message;
-        }
-    };
-    // TODO fix terrible way of passing library functions around.
-    window.assert = assert;
+lowercaseCompare = function (a, b) {
+  return a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase());
+};
 
-    /**
-    @param {number} number
-    */
-    assertIsNumber = function(number) {
-      if (typeof number !== 'number') {
-        throw new Error('argument must be a number');
-      }
-    };
-
-    lowercaseCompare = function (a, b) {
-        return a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase());
-    };
-
-    /**
-    @param {!Object.<string, T>} dict
-    @return {!Array.<T>}
-    @template T
-    */
-    dictValues = function (dict) {
-      var values = [];
-      for (var key in dict) {
-        values.push(dict[key]);
-      }
-      return values;
-    };
+/**
+   @param {!Object.<string, T>} dict
+   @return {!Array.<T>}
+   @template T
+*/
+dictValues = function (dict) {
+  var values = [];
+  for (var key in dict) {
+    values.push(dict[key]);
+  }
+  return values;
+};
 
     // Creates a map from an array of objects using the object attribute
     // specified by attr as the map key.
     //
-    // The key attribute must be unique and non-null for all objects.
-    createMapFromArrayOnAttribute = function (array, attr) {
-        var map = {};
-        for (var i = 0; i < array.length; ++i) {
-            var object = array[i];
-            if (!(attr in object)) {
-                throw 'Missing key attribute: ' + attr;
-            } else if (object[attr] === null) {
-                throw 'Null key attribute: ' + attr;
-            } else if (object[attr] in map) {
-                throw 'Duplicate key attribute: ' + attr;
-            }
-            map[object[attr]] = object;
-        }
-        return map;
-    };
-
-    // Converts an array into a set, implemented using a object where the keys
-    // are the values of the array.
-    arrayToSet = function (array) {
-        var set = {};
-        for (var i = 0; i < array.length; i++) {
-          set[array[i]] = true;
-        }
-        return set;
-    };
-
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports = {
-            assert: assert,
-            assertIsNumber: assertIsNumber,
-            lowercaseCompare: lowercaseCompare,
-            dictValues: dictValues,
-            createMapFromArrayOnAttribute: createMapFromArrayOnAttribute,
-            arrayToSet: arrayToSet
-        };
+// The key attribute must be unique and non-null for all objects.
+createMapFromArrayOnAttribute = function (array, attr) {
+  var map = {};
+  for (var i = 0; i < array.length; ++i) {
+    var object = array[i];
+    if (!(attr in object)) {
+      throw 'Missing key attribute: ' + attr;
+    } else if (object[attr] === null) {
+      throw 'Null key attribute: ' + attr;
+    } else if (object[attr] in map) {
+      throw 'Duplicate key attribute: ' + attr;
     }
-})();
+    map[object[attr]] = object;
+  }
+  return map;
+};
+
+// Converts an array into a set, implemented using a object where the keys
+// are the values of the array.
+arrayToSet = function (array) {
+  var set = {};
+  for (var i = 0; i < array.length; i++) {
+    set[array[i]] = true;
+  }
+  return set;
+};
+
+module.exports = {
+  assert,
+  assertIsNumber,
+  lowercaseCompare,
+  dictValues,
+  createMapFromArrayOnAttribute,
+  arrayToSet,
+};

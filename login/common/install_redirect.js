@@ -41,3 +41,5 @@ var getInstallRedirectUrl = function(url) {
   var hash = (uri && uri.getFragment()) ? '#' + uri.getFragment() : '';
   return helper.getURL(SIGNUP_PATH + hash);
 };
+
+modules.exports = { isInstallPage, getInstallRedirectUrl };

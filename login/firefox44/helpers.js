@@ -97,3 +97,5 @@ function ContentHelper() {
         $form.attr('autocomplete', 'off');
     };
 }
+
+module.exports = { getExtensionId, ExtensionHelper, ContentHelper };

@@ -1,0 +1,25 @@
+declare function attributeCallback(index: number, attr: string): string | number;
+
+
+type OBJECT_OR_ARRAY = Array<any> | Object;
+
+declare class _jQuery {
+  constructor(element: Element | string): _jQuery;
+
+  attr(attributeName: string): string;
+  attr(attributeName: string, attributeCallback: attributeCallback): _jQuery;
+  attr(attributeName: string, value: string | number): _jQuery;
+  attr(attributes: Object): _jQuery;
+  scrollTop(): number;
+  width(): number;
+
+  static extend(target: OBJECT_OR_ARRAY, ...w: any): OBJECT_OR_ARRAY;
+  static extend(deep: boolean, target: OBJECT_OR_ARRAY, ...w: any): OBJECT_OR_ARRAY;
+}
+
+declare module "jQuery" {
+  declare function $(element: Element | string): _jQuery;
+  declare function jQuery(element: Element | string): _jQuery;
+}
+
+var $ = require('$').$;

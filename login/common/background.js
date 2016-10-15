@@ -25,12 +25,23 @@
  * *****************************************************************************
  */
 
-import { helpers_background } from "../firefox44/helpers_background";
-import { client, serviceInstances, getSiteSecretData, getOrganizationInfo, isLoggedIn, isAttemptingLogin, addSite, editSiteShares } from "./background_api";
+import { client, serviceInstances, getSiteSecretData, getOrganizationInfo,
+         isLoggedIn, isAttemptingLogin, addSite, editSiteShares, frontend, userIdentity,
+         reportError, getIdentity, getLoginState, mitroLogout, listUsersGroupsAndSecrets,
+         getSiteSecretDataForDisplay, addSecret, addSecretToGroups, editSecret, removeSecret,
+         getGroup, addGroup, removeGroup, editGroup, addIssue, getAuditLog, createOrganization,
+         getOrganization, selectOrganization, mutateOrganization, changeRemotePassword,
+         updateIconState, loadEncryptedKey, attemptingLogin, saveEncryptedKey, getLoginToken,
+         commonOnLoginCode, helper,
+       } from "./background_api";
 import { getCanonicalHost } from "./domain";
 import { forge } from "node-forge";
 import { URI } from "../frontend/static/js/URI";
 import * as password_generator from "../../api/js/cli/password_generator";
+import { isInstallPage, getInstallRedirectUrl } from "./install_redirect";
+import { getServiceInstances, getLoginHintsForHost, updateLastUsedServiceForHost } from "./service_cache";
+import { loadSettingsAsync, loadSettings } from "./settings.js";
+import { formRecorder } from "./form_handling";
 
 /**
  * Setting up the worker, binding the client
@@ -39,118 +50,11 @@ import * as password_generator from "../../api/js/cli/password_generator";
 // once every 20 minutes.
 var SERVICE_LIST_REFRESH_PERIOD = 1000 * 60 * 20;
 
-var helper = new helpers_background.BackgroundHelper();
-helper.bindClient(client);
-
 // Stores login details. Returned when the content script requests it.
 var pendingLoginRequests = {};
 
-// Map of recorded form urls.
-var formRecorder = {};
 
-var settings = {};
-var LOGIN_STORE_KEY_PREFIX = 'last_used_service_for_host:';
-var serviceForHostCache = {};
 
-var populateLastUsedServiceCache = function() {
-    // TODO: this should be null but that would requiring changing
-    // the stuff in helpers.js (safari)
-    helper.storage.local.get(undefined, function(items) {
-        var loaded = 0;
-        for (var key in items) {
-            if (key.indexOf(LOGIN_STORE_KEY_PREFIX) === 0) {
-                serviceForHostCache[key.substr(LOGIN_STORE_KEY_PREFIX.length)] = items[key];
-                ++loaded;
-            }
-        }
-        console.log('loaded', loaded, 'recently used services from store');
-    });
-};
-
-var updateLastUsedServiceForHost = function(service) {
-    var key = LOGIN_STORE_KEY_PREFIX + getCanonicalHost(service.clientData.loginUrl);
-    var data = {};
-    data[key] = service.secretId;
-    helper.storage.local.set(data);
-    serviceForHostCache[getCanonicalHost(service.clientData.loginUrl)] = service.secretId;
-};
-
-var getLastUsedServiceForHost = function(canonicalHost: string) {
-    return serviceForHostCache[canonicalHost];
-};
-
-var getLoginHintsForHost = function(host) {
-    var data = {};
-    var matches = getServiceInstances(host);
-
-    if (matches.length) {
-        data.services = matches;
-    }
-    return data;
-};
-
-/** Return service instances matching host, or all services if host is undefined.
-@param {string} host
-@param {function(!Array.<!Object>)=} callback optional
-@return {!Array.<!Object>}
-*/
-var getServiceInstances = function (host, callback) {
-    var matches = [];
-    var recent = parseInt(getLastUsedServiceForHost(host), 10);
-    // undefined arguments get 'null' when passed through messaging
-    if (serviceInstances) {
-        if (typeof host !== 'undefined' && host !== null) {
-            for (var i = 0; i < serviceInstances.length; i++) {
-                var instance = serviceInstances[i];
-                var instanceHost = getCanonicalHost(instance.clientData.loginUrl);
-                if (instanceHost === host || instanceHost === 'www.' + host) {
-                    serviceInstances[i].mostRecent = (serviceInstances[i].secretId === recent);
-                    matches.push(serviceInstances[i]);
-                }
-            }
-        } else {
-            matches = serviceInstances;
-        }
-    }
-
-    if(typeof(callback) === 'function') callback(matches);
-    return matches;
-};
-
-var loadSettings = function () {
-    helper.storage_sync.get('settings', function (items) {
-        if (CHROME && chrome.runtime.lastError) {
-            // TODO(ivan): safari and ff implementation
-            console.log('error loading settings', chrome.runtime.lastError.message);
-        } else if ('settings' in items) {
-            console.log('settings loaded; username:', items.settings.username,
-                    'rememberMe:', items.settings.rememberMe);
-            settings = items.settings;
-        }
-    });
-    populateLastUsedServiceCache();
-};
-
-var loadSettingsAsync = function(onSuccess) {
-    loadSettings();
-    if (onSuccess) {
-        onSuccess(settings);
-    }
-};
-
-var saveSettingsAsync = function(newSettings, onSuccess, onError) {
-    helper.storage_sync.set({'settings': newSettings}, function () {
-        if(CHROME && chrome.runtime.lastError){
-            // TODO(ivan): safari and ff implementation
-            console.log('error saving settings to storage', chrome.runtime.lastError.message);
-            if (onError) {
-                onError(chrome.runtime.lastError.message);
-            }
-        } else {
-            loadSettingsAsync(onSuccess);
-        }
-    });
-};
 
 
 // this code tries to preserve old, un-b64-encoded device ids where possible.
@@ -540,7 +444,7 @@ client.addListener(['content', 'extension'], function (message) {
         delete formRecorder[sender.id];
         var thisSecretId = data.secretId;
         var newPassword = data.passwordField.value;
-        fe.workerInvokeOnIdentity(userIdentity, 'editSitePassword', thisSecretId, newPassword,
+        frontend.workerInvokeOnIdentity(userIdentity, 'editSitePassword', thisSecretId, newPassword,
             function() {console.log("updated secret");},
             function(error) {reportError(undefined, 'Error saving password' + error.userVisibleError);}
             );
@@ -713,7 +617,7 @@ var SERVER_REJECTS = [
 
 var refreshServerHints = function () {
     try {
-        mitro.fe.getDeviceIdAsync(function(deviceId) {
+        frontend.getDeviceIdAsync(function(deviceId) {
             $.getJSON(
               "https://" + MITRO_HOST + ":"  + MITRO_PORT + "/mitro-core/ServerRejects?deviceId=" + deviceId,
               function(data) {
@@ -736,6 +640,7 @@ var getServerHintsForUrl = function(url) {
     var outs = {'reject' : {'submit' : [], 'password' : [], 'username' : [], 'form' : []},
                 'additional_submit_button_ids' : [],
                 'allow_empty_username' : false,
+                'empty_password_username_id': null,
                 'highlightSelectedForms':highlightSelectedForms
             };
     try {
@@ -809,7 +714,7 @@ var automaticLoginLoop = function() {
 
         getLoginToken(keyUid.uid, function(token) {
             attemptingLogin = true;
-            mitro.fe.workerLoginWithTokenAndLocalKey(keyUid.uid, null, token, MITRO_HOST, MITRO_PORT, keyUid.key,
+            frontend.workerLoginWithTokenAndLocalKey(keyUid.uid, null, token, MITRO_HOST, MITRO_PORT, keyUid.key,
                 // tfaCode:
                 null,
                 function(identity, rememberMe) {
@@ -838,8 +743,8 @@ window.addEventListener('online', function(e) {
 // Starts a background task to generate keys
 // and log in.
 getDeviceId(function(deviceId) {
-    mitro.fe.setFailover(FAILOVER_MITRO_HOST, FAILOVER_MITRO_PORT);
-    mitro.fe.setDeviceId(deviceId);
+    frontend.setFailover(FAILOVER_MITRO_HOST, FAILOVER_MITRO_PORT);
+    frontend.setDeviceId(deviceId);
     refreshServerHints();
     automaticLoginLoop();
 });

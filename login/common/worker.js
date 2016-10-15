@@ -100,3 +100,6 @@ mitro.rpc = mitro.rpc || {};
 mitro.rpc._PostToMitro = client.ajax;
 
 getExtensionId = function() { return extensionId;};
+
+
+module.exports = { getExtensionId };

@@ -638,12 +638,4 @@ Client.prototype.initRemoteExecution = function(from, methods, self) {
     })(this));
 };
 
-/**
- * setting the CommonJS module
- * to be used by the firefox main.js
- */
-if (typeof(exports) !== 'undefined') {
-    exports.Client = Client;
-} else if(typeof module !== 'undefined' && module.exports) {
-    module.exports = Client;
-}
+module.exports = { Client };
