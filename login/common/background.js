@@ -25,14 +25,14 @@
  * *****************************************************************************
  */
 
-import { client, serviceInstances, getSiteSecretData, getOrganizationInfo,
+import { client, getSiteSecretData, getOrganizationInfo,
          isLoggedIn, isAttemptingLogin, addSite, editSiteShares, frontend, userIdentity,
          reportError, getIdentity, getLoginState, mitroLogout, listUsersGroupsAndSecrets,
          getSiteSecretDataForDisplay, addSecret, addSecretToGroups, editSecret, removeSecret,
          getGroup, addGroup, removeGroup, editGroup, addIssue, getAuditLog, createOrganization,
          getOrganization, selectOrganization, mutateOrganization, changeRemotePassword,
-         updateIconState, loadEncryptedKey, attemptingLogin, saveEncryptedKey, getLoginToken,
-         commonOnLoginCode, helper,
+         updateIconState, loadEncryptedKey, saveEncryptedKey, getLoginToken,
+         commonOnLoginCode, helper, setAttemptingLogin
        } from "./background_api";
 import { getCanonicalHost } from "./domain";
 import { forge } from "node-forge";
@@ -40,8 +40,10 @@ import { URI } from "../frontend/static/js/URI";
 import * as password_generator from "../../api/js/cli/password_generator";
 import { isInstallPage, getInstallRedirectUrl } from "./install_redirect";
 import { getServiceInstances, getLoginHintsForHost, updateLastUsedServiceForHost } from "./service_cache";
-import { loadSettingsAsync, loadSettings } from "./settings.js";
+import { loadSettingsAsync, loadSettings } from "./settings";
 import { formRecorder } from "./form_handling";
+import type { SecretData, GroupId, AddSiteData } from './background_api';
+import type { FrameId } from "./service_cache";
 
 /**
  * Setting up the worker, binding the client
@@ -195,7 +197,7 @@ var shouldShowSaveServiceDialog = function (formData, cb) {
         // we have a match (same site, same username);
         // we should check to see if the password is different from what we have stored.
         var secretId = matches[0].secretId;
-        getSiteSecretData(secretId, function (loginData) {
+        getSiteSecretData(secretId, function (loginData: SecretData) {
             if (formData.passwordField.value === loginData.criticalData.password) {
                 // passwords are the same, don't offer to overwrite
                 cb(false, null);
@@ -274,22 +276,24 @@ var isLoginInProgress = function (tabId) {
     return !!logindata;
 };
 
-var sendLoginMessageToTab = function (tab, message) {
-    var secretId = pendingLoginRequests[tab.id].secretId;
-    delete pendingLoginRequests[tab.id];
+var sendLoginMessageToTab = function (tab, message: Message) {
+  const secretId = pendingLoginRequests[tab.id].secretId;
+  delete pendingLoginRequests[tab.id];
 
-    getSiteSecretData(secretId, function (loginData) {
-        message.sendResponse({data: {'login' : loginData,
-                                     'frameId' : message.data.frameId,
-                                     'serverHints' : getServerHintsForUrl(tab.url)}
-        });
-    }, function(e) {
-        console.log('sendLoginMessageToTab call to getSiteSecretData failed?', e);
-        // TODO: Should we respond to message?
-    });
+
+  getSiteSecretData(secretId, function (loginData) {
+    if (message.type !== "login") { throw new Error('unexpected type'); };
+    message.sendResponse({data: {'login' : loginData,
+                                 'frameId' : message.data.frameId,
+                                 'serverHints' : getServerHintsForUrl(tab.url)}
+                         });
+  }, function(e) {
+    console.log('sendLoginMessageToTab call to getSiteSecretData failed?', e);
+    // TODO: Should we respond to message?
+  });
 };
 
-var doLogin = function (secretData, tabIndex) {
+var doLogin = function (secretData: SecretData, tabIndex) {
     console.log('login request for ' + secretData.clientData.loginUrl);
      // requesting login for page; open tab and store the data
     var options = {
@@ -371,42 +375,83 @@ if (FIREFOX) {
 }
 
 client.initRemoteExecution(['extension', 'content'], ['createTab', 'generatePassword']);
+
+
+type Message = {
+  type: 'init';
+  data: { url: string, frameId: FrameId };
+  sendResponse: (data: mixed) => void;
+} | {
+  type: 'showInfoBarOnTopFrame';
+  sendResponse: (data: mixed) => void;
+  data: mixed;
+} | {
+  type: 'login';
+  data: SecretData & { frameId: FrameId };
+  sendResponse: (data: mixed) => void;
+} | {
+  type: 'loginAccepted';
+  sendResponse: (data: mixed) => void;
+  data: any;
+} | {
+  type: 'loginRejected';
+  data: any;
+} | {
+  type: 'saveServiceAccepted';
+  data: any;
+} | {
+  type: 'replaceServiceAccepted';
+  data: any;
+} | {
+  type: 'saveServiceRejected';
+  data: any;
+} | {
+  type: 'saveServiceBlacklisted';
+  data: AddSiteData;
+} | {
+  type: 'formSubmit';
+  data: any;
+};
+
+// & {sender: any, }
+
 // Listen for messages from content scripts
 //TODO: we should separate the content and the extension calls
-client.addListener(['content', 'extension'], function (message) {
-    var type = message.type;
-    var sender = message.sender;
-    var data = message.data;
+client.addListener(['content', 'extension'], function (message: Message) {
+    var sender = (message: any).sender;
 
     console.log('background received message from content script, type:', message.type);
     var onError = function (error) {
-        message.sendResponse({error: error});
+      (message: any).sendResponse({error: error});
     };
 
-    if (type === 'init') {
+  if (message.type === 'init') {
+    const data = message.data;
         console.log('got init message from Frame ', message.data.frameId);
         // Should content script fill a form on this page?
         if (isLoginInProgress(sender.id)) {
             sendLoginMessageToTab(sender, message);
         } else {
-            var host = getCanonicalHost(message.data.url);
-            console.log('trying to find logins for ' , host);
-            data = getLoginHintsForHost(host);
-            data.serverHints = getServerHintsForUrl(message.data.url);
-            data.frameId = message.data.frameId;
-            message.sendResponse({data: data});
+            const host = getCanonicalHost(data.url);
+            console.log('trying to find logins for ', host);
+            const data2 = getLoginHintsForHost(host);
+            data2.serverHints = getServerHintsForUrl(message.data.url);
+            data2.frameId = message.data.frameId;
+            message.sendResponse({data: data2});
         }
-    } else if (type === 'showInfoBarOnTopFrame') {
+    } else if (message.type === 'showInfoBarOnTopFrame') {
         message.sendResponse({data : message.data});
-    } else if (type === 'login') {
+    } else if (message.type === 'login') {
         // Login request from mitro service list page.
-        doLogin(data, sender.index + 1);
-    } else if (type === 'loginAccepted') {
+        doLogin(message.data, sender.index + 1);
+    } else if (message.type === 'loginAccepted') {
         // Login request from login infobar
-        var secretId = parseInt(data.value, 10);
+        const data = message.data;
+        const secretId = parseInt(data.value, 10);
         console.log('fetching secret for id ', secretId);
 
-        var onSuccess = function (response_data) {
+        const onSuccess = function (response_data) {
+            if (message.type !== 'loginAccepted') { throw "invalid type"; }
             message.sendResponse({data: response_data, frameId: data.frameId});
             // record that we logged in
             updateLastUsedServiceForHost(response_data);
@@ -414,11 +459,12 @@ client.addListener(['content', 'extension'], function (message) {
 
         getSiteSecretData(secretId, onSuccess, onError);
         return true;
-    } else if (type === 'loginRejected') {
+    } else if (message.type === 'loginRejected') {
         // User closed the login infobar.
         console.log('login rejected');
-    } else if (type === 'saveServiceAccepted') {
+    } else if (message.type === 'saveServiceAccepted') {
         delete formRecorder[sender.id];
+        const data = message.data;
         addSite(data, function(secretId) {
             var maybeShareSecret = function () {
                 if (data.showShareDialog) {
@@ -430,7 +476,7 @@ client.addListener(['content', 'extension'], function (message) {
                     createTab(options, function(ignored){});
                 }
             };
-            if (data.orgId) {
+            if (data.orgId !== null) {
                 var shareData = {secretId: secretId,
                                  groupIdList: [],
                                  identityList: [],
@@ -440,20 +486,23 @@ client.addListener(['content', 'extension'], function (message) {
                 maybeShareSecret();
             }
         }, onError);
-    } else if (type === 'replaceServiceAccepted') {
+    } else if (message.type === 'replaceServiceAccepted') {
         delete formRecorder[sender.id];
+        const data = message.data;
         var thisSecretId = data.secretId;
         var newPassword = data.passwordField.value;
         frontend.workerInvokeOnIdentity(userIdentity, 'editSitePassword', thisSecretId, newPassword,
             function() {console.log("updated secret");},
-            function(error) {reportError(undefined, 'Error saving password' + error.userVisibleError);}
+            function(error) {reportError(null, 'Error saving password' + error.userVisibleError);}
             );
-    } else if (type === 'saveServiceRejected') {
+    } else if (message.type === 'saveServiceRejected') {
         delete formRecorder[sender.id];
-    } else if (type === 'saveServiceBlacklisted') {
+    } else if (message.type === 'saveServiceBlacklisted') {
+        const data = message.data;
         delete formRecorder[sender.id];
         addSiteToSaveBlacklist(data.before_page);
-    } else if (type === 'formSubmit') {
+    } else if (message.type === 'formSubmit') {
+        const data = message.data;
         console.log('formSubmit');
         var formData = data;
         // let's see if we have an action
@@ -685,8 +734,9 @@ var automaticLoginLoop = function() {
     _automaticLoginTimerId = null;
 
     console.log('starting auto-login attempt');
-    loadEncryptedKey(function(keyUid) {
-        if (!keyUid) {
+  loadEncryptedKey(function(keyUid) {
+
+        if (keyUid === null || keyUid === undefined) {
             console.log('autologin: no local key, abandoning efforts to auto-login');
             return;
         }
@@ -695,8 +745,8 @@ var automaticLoginLoop = function() {
             return;
         }
 
-        var automaticLoginError = function(e) {
-            attemptingLogin = false;
+        const automaticLoginError = function(e) {
+            setAttemptingLogin(false);
             console.log('error w/ background login; exception:', e);
             if (e.exceptionType === 'DoEmailVerificationException') {
               // if this is an automated login attempt and we get an email verification exception,
@@ -713,7 +763,14 @@ var automaticLoginLoop = function() {
         };
 
         getLoginToken(keyUid.uid, function(token) {
-            attemptingLogin = true;
+            setAttemptingLogin(true);
+
+            // need to re-check keyUid because it could have been nulled in the meantime
+            if (keyUid === null || keyUid === undefined) {
+               console.log('autologin: no local key, abandoning efforts to auto-login');
+               return;
+             }
+
             frontend.workerLoginWithTokenAndLocalKey(keyUid.uid, null, token, MITRO_HOST, MITRO_PORT, keyUid.key,
                 // tfaCode:
                 null,

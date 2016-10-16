@@ -1,3 +1,5 @@
+var path = require('path');
+
 module.exports = {
   entry: "./login/common/background.js",
   output: {
@@ -7,11 +9,18 @@ module.exports = {
   module: {
     loaders: [
       { test: /\.js$/,
-        exclude: /node_modules/,
+        include: [
+          path.resolve(__dirname, "login"),
+        ],
+        exclude: [
+          path.resolve(__dirname, "node_modules"),
+        ],
         loader: "babel-loader",
-        presets: ["es2015"],
+        query: {
+          presets: ['es2015']
+        },
         babelrc: false,
       },
-    ]
-  }
+    ],
+  },
 };

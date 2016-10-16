@@ -29,12 +29,12 @@ import { keycache } from "../../api/js/cli/keycache";
 import { _PostToMitro } from "../../api/js/cli/rpc";
 import { forge } from "node-forge";
 import { Client } from "../frontend/static/js/client";
-import { jQuery } from "jQuery";
+import { jQuery } from "./jquery.min";
 import { getExtensionId } from "./worker";
 import { assert } from "./utils";
 import { getCanonicalHost } from "./domain";
 import { helpers_background } from "../firefox44/helpers_background";
-import { getLoginHintsForHost } from "./service_cache";
+import { getLoginHintsForHost, clearServiceInstances, setServiceInstances } from "./service_cache";
 import { saveSettingsAsync } from "./settings";
 import { clearRecordedForms } from "./form_handling";
 
@@ -49,24 +49,39 @@ type Identity = {
 type LoginState = {
 };
 
-type SecretData = {
+export type SecretData = {
   secretId: SecretId;
   groupIds: Array<GroupId>;
   serverData: {
+    loginUrl: ?string; // optional, sometimes we just add a secret
+  };
+  clientData: {
     loginUrl: string;
+    username: string;
+  };
+  secretData: {};
+  criticalData: {
+    password: string;
+  };
+};
+
+export type AddSecretData = {
+  serverData: {
+    loginUrl: ?string; // optional, sometimes we just add a secret
   };
   clientData: {};
   secretData: {};
 };
 
-type LoginData = {
+
+export type AddSiteData = {
   before_page: string;
   usernameField: HTMLInputElement;
   passwordField: HTMLInputElement;
 };
 
-type SecretId = string;
-type GroupId = number;
+type SecretId = number;
+export type GroupId = number;
 
 type SiteData = {
   secretId: SecretId;
@@ -86,6 +101,11 @@ type Issue = {
   logs: string;
 };
 
+type KeyUid = {
+  uid: string;
+  key: string;
+};
+
 type GetAuditLog = {};
 type AuditLog = {};
 type CreateOrganization = {};
@@ -94,6 +114,7 @@ type OrgInfo = {};
 type OrganizationId = number;
 type MutateOrganization = {};
 type ChangeRemotePassword = {};
+
 
 const getNewRSAKeysAsync = function(numKeys, onSuccess, onError) {
     keycacheI.getNewRSAKeysAsync(numKeys, function(keys) {
@@ -159,10 +180,7 @@ client.setExtensionId(getExtensionId());
 var fe = client;
 var frontend = client;
 var userIdentity: ?Identity = null;
-var attemptingLogin = false;
-
-// used in background.js by the popup (and maybe by the infobar?)
-var serviceInstances = null;
+let attemptingLogin = false;
 
 var storePasswordForTwoFactor = null;
 var clearPasswordCallbackId = null;
@@ -171,7 +189,7 @@ var selectedOrgId = null;
 
 type ErrorCallback = (message: Error) => void;
 
-var reportError = function (onError: ErrorCallback, message: string) {
+var reportError = function (onError: ?ErrorCallback, message: string) {
   console.log(message);
   if (onError === undefined || onError == null) { return };
   onError(new Error(message));
@@ -277,7 +295,7 @@ var commitPendingGroupDiffs = function(identity, nonce, checksum, onSuccess, onE
 };
 client.initRemoteExecution('extension', 'commitPendingGroupDiffs');
 
-var loadEncryptedKey = function(callback: (keyUid: ?string) => void) {
+var loadEncryptedKey = function(callback: (keyUid: ?KeyUid) => void) {
     var key = 'encryptedKey';
     helper.storage.local.get(key, function(items) {
         if (CHROME && chrome.runtime.lastError) {
@@ -331,13 +349,13 @@ var mitroSignup = function (username, password, rememberMe, onSuccess, onError) 
     });
 };
 
-var commonOnLoginCode = function(identity: Identity, rememberMe: boolean, onSuccess: () => void, onError: (error: Error) => void) {
+var commonOnLoginCode = function(identity: Identity, rememberMe: boolean, onSuccess: () => void, onError: (error: any) => void) {
     console.log('onLogin: ', identity.uid);
     attemptingLogin = false;
     if (isLoggedIn()) {
         // this looks like a race condition. Abandon login efforts
         console.log('already logged in. Potential race condition? Aborted.');
-        onError(new Error('already logged in'));
+        onError('already logged in');
         return;
     }
     saveLoginToken(identity);
@@ -421,9 +439,9 @@ var mitroLogout = function (onSuccess: () => void, onError: (arg: any) => void) 
     // This will clear state in the background context.
     setIdentity(null);
     saveEncryptedKey(null, null);
-    serviceInstances = null;
     selectedOrgId = null;
     clearRecordedForms();
+    clearServiceInstances();
 
     helper.removeContextMenu();
 
@@ -438,6 +456,11 @@ var isLoggedIn = function () {
 var isAttemptingLogin = function () {
     return attemptingLogin;
 };
+
+function setAttemptingLogin(x: boolean) {
+  attemptingLogin = x;
+}
+
 
 var changePassword = function (oldPassword, newPassword, up, onSuccess, onError) {
   if (!isLoggedIn() || up.token === null || up.token_signature === null) {
@@ -511,7 +534,7 @@ var listUsersGroupsAndSecrets = function (onSuccess: () => void, onError: ErrorC
         console.log('fetched ' + response.secrets.length + ' services');
         console.log('fetched ' + response.users.length + ' users');
         console.log('fetched ' + response.groups.length + ' groups');
-        serviceInstances = response.secrets;
+        setServiceInstances(response.secrets);
         reportSuccess(onSuccess, response);
     };
 
@@ -542,7 +565,7 @@ var internalGetSiteSecretData = function (fcn, secretId, onSuccess, onError) {
     fe.workerInvokeOnIdentity(userIdentity, fcn, secretId, onGetSiteSecretData, onGetSiteSecretDataError);
 };
 
-var getSiteSecretData = function (secretId: SecretId, onSuccess: (data: number) => void, onError: ErrorCallback) {
+var getSiteSecretData = function (secretId: SecretId, onSuccess: (data: SecretData) => void, onError: ErrorCallback) {
     return internalGetSiteSecretData('getSiteSecretData', secretId, onSuccess, onError);
 };
 
@@ -574,7 +597,7 @@ var addSecretToGroups = function (data: SecretData, onSuccess: (secretId: Secret
 };
 
 
-var addSecret = function (data: SecretData, onSuccess: (secretId: SecretId) => void, onError: ErrorCallback) {
+var addSecret = function (data: AddSecretData, onSuccess: (secretId: SecretId) => void, onError: ErrorCallback) {
     if (!isLoggedIn()) {
         reportError(onError, 'Not logged in');
         return;
@@ -620,7 +643,7 @@ var editSecret = function (data: SecretData, onSuccess: (secretId: SecretId) => 
                               data.secretData, onEditSecret, onEditSecretError);
 };
 
-var addSite = function (loginData: LoginData, onSuccess: (secretId: SecretId) => void , onError: ErrorCallback) {
+var addSite = function (loginData: AddSiteData, onSuccess: (secretId: SecretId) => void , onError: ErrorCallback) {
     if (!isLoggedIn()) {
         reportError(onError, 'Not logged in');
         return;
@@ -818,7 +841,8 @@ var createOrganization = function(data: CreateOrganization, onSuccess: () => voi
     fe.workerInvokeOnIdentity(userIdentity, 'createOrganization', data, onSuccess, onError);
 };
 
-var getOrganizationInfo = function (request: GetOrganization, onSuccess: (orgInfo: OrgInfo) => void, onError: ErrorCallback) {
+var getOrganizationInfo = function (request: ?GetOrganization, onSuccess: (orgInfo: OrgInfo) => void, onError: ErrorCallback) {
+  // TODO(tom): request seems unused?
   console.log('getOrganizationInfo');
   if (!isLoggedIn()) {
     onError(new Error('Not logged in'));
@@ -904,9 +928,10 @@ var addSecretFromSelection = function(url, text) {
 
     secretData.note = text;
     addSecret({
-        serverData: {},
+        serverData: {loginUrl: null},
         clientData: clientData,
-        secretData: secretData
+        secretData: secretData,
+        groupIds: [],
     }, function(secretId) {
         console.log('SUCCESS. Successfully saved secret from selection. secretId:', secretId);
     }, function(err) {
@@ -918,11 +943,11 @@ var addSecretFromSelection = function(url, text) {
 
 module.exports = {
   client,
-  serviceInstances,
   getSiteSecretData,
   getOrganizationInfo,
   isLoggedIn,
   isAttemptingLogin,
+  setAttemptingLogin,
   addSite,
   editSiteShares,
   frontend,
@@ -950,8 +975,8 @@ module.exports = {
   changeRemotePassword,
   updateIconState,
   loadEncryptedKey,
-  attemptingLogin,
   saveEncryptedKey,
   getLoginToken,
   commonOnLoginCode,
+  helper, // TODO(tom): can we avoid exporting this?
 };

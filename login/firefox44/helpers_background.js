@@ -156,7 +156,7 @@ helpers_background.BackgroundHelper = function() {
         chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
             var message = request;
             message.sender = sender.tab;
-            message.sendResponse = function(data){
+            message.sendResponse = function(data) {
                 var newMessage = client.composeResponse(this, data);
                 chrome.tabs.sendMessage(this.sender.id, newMessage);
             };

@@ -1,6 +1,23 @@
 /* @flow */
+import { helper } from "./background_api";
+import { getCanonicalHost } from "./domain";
+import type { SecretData } from "./background_api";
+
 const LOGIN_STORE_KEY_PREFIX = 'last_used_service_for_host:';
 let serviceForHostCache = {};
+
+// used in background.js by the popup (and maybe by the infobar?)
+var serviceInstances: ?Array<SecretData> = null;
+
+export type FrameId = number;
+
+export type LoginHints = {
+  // TODO(tom): services, serviceInstances, secrets, ... naming is hugely inconsistent
+  services: Array<SecretData>;
+  serverHints: ?mixed;
+  frameId: FrameId;
+};
+
 
 function populateLastUsedServiceCache() {
   // TODO: this should be null but that would requiring changing
@@ -17,7 +34,7 @@ function populateLastUsedServiceCache() {
   });
 };
 
-function updateLastUsedServiceForHost(service) {
+function updateLastUsedServiceForHost(service: SecretData) {
   const key = LOGIN_STORE_KEY_PREFIX + getCanonicalHost(service.clientData.loginUrl);
   let data = {};
   data[key] = service.secretId;
@@ -29,38 +46,49 @@ function getLastUsedServiceForHost(canonicalHost: string) {
   return serviceForHostCache[canonicalHost];
 };
 
-function getLoginHintsForHost(host: string) {
-  let data = {};
-  const matches = getServiceInstances(host);
-
-  if (matches.length) {
-    data.services = matches;
-  }
-  return data;
+function getLoginHintsForHost(host: string): LoginHints {
+  return {
+    serverHints: null,
+    frameId: 0,
+    services: getServiceInstances(host),
+  };
 };
 
-function getServiceInstances(host: string, callback) {
+function getServiceInstances(host: string, callback: ?(matches: Array<SecretData>) => void): Array<SecretData> {
   var matches = [];
   var recent = parseInt(getLastUsedServiceForHost(host), 10);
-  // undefined arguments get 'null' when passed through messaging
-  if (serviceInstances) {
-    if (typeof host !== 'undefined' && host !== null) {
-      for (var i = 0; i < serviceInstances.length; i++) {
-        var instance = serviceInstances[i];
-        var instanceHost = getCanonicalHost(instance.clientData.loginUrl);
-        if (instanceHost === host || instanceHost === 'www.' + host) {
-          serviceInstances[i].mostRecent = (serviceInstances[i].secretId === recent);
-          matches.push(serviceInstances[i]);
-        }
-      }
-    } else {
-      matches = serviceInstances;
-    }
+
+  if (serviceInstances === null || serviceInstances === undefined) {
+    return [];
   }
 
-  if(typeof(callback) === 'function') callback(matches);
+  if (typeof host !== 'undefined' && host !== null) {
+    for (var i = 0; i < serviceInstances.length; i++) {
+      var instance = (serviceInstances[i] : any);
+      var instanceHost = getCanonicalHost(instance.clientData.loginUrl);
+      if (instanceHost === host || instanceHost === 'www.' + host) {
+        instance.mostRecent = (serviceInstances[i].secretId === recent);
+        matches.push(instance);
+      }
+    }
+  } else {
+    matches = serviceInstances;
+  }
+
+  if (callback !== null && callback !== undefined) {
+    callback(matches);
+  }
   return matches;
 };
+
+function clearServiceInstances() {
+  serviceInstances = null;
+}
+
+function setServiceInstances(services: Array<SecretData>) {
+  serviceInstances = services;
+}
+
 
 module.exports = {
   populateLastUsedServiceCache,
@@ -68,4 +96,6 @@ module.exports = {
   getLastUsedServiceForHost,
   getLoginHintsForHost,
   getServiceInstances,
+  clearServiceInstances,
+  setServiceInstances,
 }

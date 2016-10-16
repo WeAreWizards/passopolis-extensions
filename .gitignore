@@ -17,4 +17,4 @@
 # Ignore compiled Python
 *.pyc
 
-./node_modules
+node_modules

@@ -30,24 +30,10 @@ var forge = forge || require('node-forge');
 keycache = {};
 
 var _Worker = null;
+
 // define window.mitro.keycache for the browser
 if(typeof(window) !== 'undefined') {
   _Worker = (typeof(unsafeWindow) !== 'undefined') ? unsafeWindow.Worker : Worker;
-}
-
-// define node.js module
-else if(typeof(module) !== 'undefined' && module.exports) {
-  mitro.crappycrypto = require('./crappycrypto.js');
-  mitro.crypto = require('./crypto.js');
-  module.exports = { keycache };
-  try {
-    _Worker = require('webworker-threads').Worker;
-  } catch (e) {
-    // failed to load webworkers; ignore if DISABLE_WEBWORKERS env var is set
-    if (!process.env.DISABLE_WEBWORKERS) {
-      throw e;
-    }
-  }
 }
 
 // ideally keep the cache fill with this many keys
@@ -123,7 +109,6 @@ keycache.MakeKeyCache = function() {
       popListener = listener;
     },
 
-
     setTemporaryLimit : function(count, onSuccess, onError) {
       if (count < 0) {
         onError('invalid request');
@@ -175,8 +160,6 @@ keycache.MakeKeyCache = function() {
 keycache.getEntropyBytes = function(numBytes) {
   return forge.random.seedFileSync(numBytes);
 };
-
-
 
 keycache.startFiller = function(cache) {
   // start a worker: get it to fill the cache
@@ -243,6 +226,3 @@ keycache.startFiller = function(cache) {
     }
   };
 };
-
-
-})();

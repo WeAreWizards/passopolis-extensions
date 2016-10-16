@@ -1,18 +1,24 @@
 /* @flow */
 
 import { populateLastUsedServiceCache } from "./service_cache";
+import { helper } from "./background_api";
 
-
-var settings = {};
-
-var loadSettingsAsync = function(onSuccess) {
-    loadSettings();
-    if (onSuccess) {
-        onSuccess(settings);
-    }
+type Settings = {
+  username: string;
+  rememberMe: boolean;
 };
 
-var saveSettingsAsync = function(newSettings, onSuccess, onError) {
+var settings = {username: "", rememberMe: false};
+
+var loadSettingsAsync = function(onSuccess: (settings: Settings) => void) {
+  // TODO(tom): not really async, why does this exist?
+  loadSettings();
+  if (onSuccess) {
+    onSuccess(settings);
+  }
+};
+
+var saveSettingsAsync = function(newSettings: Settings, onSuccess: (settings: Settings) => void, onError: (error: any) => void) {
     helper.storage_sync.set({'settings': newSettings}, function () {
         if(CHROME && chrome.runtime.lastError){
             // TODO(ivan): safari and ff implementation

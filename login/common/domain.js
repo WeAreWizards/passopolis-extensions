@@ -24,9 +24,10 @@
  *     You can contact the authors at inbound@mitro.co.
  * *****************************************************************************
  */
+import { URI } from "./URI";
 
-getCanonicalHost = function(full_url) {
-  var host = new URI(full_url).getAuthority();
+function getCanonicalHost(fullUrl: string) {
+  var host = new URI(fullUrl).getAuthority();
   if (!host) {
     return "";
   }
