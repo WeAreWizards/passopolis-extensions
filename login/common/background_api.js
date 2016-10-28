@@ -70,15 +70,6 @@ client.addSender('worker', function(message){
     worker.postMessage(message);
 });
 
-// this function will be used to console.log from inside the worker
-// because the webworker doesn't have such feature
-var console_log = function(message) {
-    // message is an array of console.log arguments
-    var args = ['Web Worker console.log:'];
-    args = args.concat(message);
-    console.log.apply(console, args);
-};
-
 var ajax = mitro.rpc._PostToMitro;
 
 

@@ -11,6 +11,14 @@ current form. We have a hacked-together shell script that copies a few
 files around and then packs the extension which we will release when
 it's a bit less ugly.
 
+# Building & testing the extension for Firefox
+
+```
+$ nix-build extensions/build.nix -A firefox-44-extension && chmod a+w /tmp/pe.xpi && cp -r result/pe.xpi /tmp/pe.xpi
+```
+
+Use addon-debugging "load temporary addon", then hit reload after each rebuild.
+
 # Branding
 
 We're replacing the Mitro branding with our own Passopolis

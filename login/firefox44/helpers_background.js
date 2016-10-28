@@ -47,7 +47,9 @@ var _createMitroTab = function(chromeTab) {
 helpers_background.BackgroundHelper = function() {
     this.getURL = getURL;
     this.storage = chrome.storage;
-    this.storage_sync = chrome.storage.sync;
+    // TODO tom - sync storage not yet implemented see
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=1213475
+    this.storage_sync = chrome.storage.local;
     this.ajax = helpers_common.ajax;
     this.cookies = chrome.cookies;
     this.setIcon = function(details) {
@@ -85,7 +87,7 @@ helpers_background.BackgroundHelper = function() {
         remove: chrome.tabs.remove,
         getSelected: function(callback) {
             // Pass null to get selected tab in current window.
-            chrome.tabs.getSelected(null, function(tab) {
+            chrome.tabs.query({active: true}, function(tab) {
                 callback(_createMitroTab(tab));
             });
         },
@@ -151,7 +153,7 @@ helpers_background.BackgroundHelper = function() {
     };
 
     this.bindClient = function(client){
-        chrome.extension.onMessage.addListener(function(request, sender, sendResponse){
+        chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
             var message = request;
             message.sender = sender.tab;
             message.sendResponse = function(data){

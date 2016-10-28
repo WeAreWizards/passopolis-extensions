@@ -43,6 +43,7 @@ var lowercaseCompare;
 var dictValues;
 var createMapFromArrayOnAttribute;
 var arrayToSet;
+
 (function () {
     'use strict';
 
@@ -58,6 +59,8 @@ var arrayToSet;
             throw message;
         }
     };
+    // TODO fix terrible way of passing library functions around.
+    window.assert = assert;
 
     /**
     @param {number} number
@@ -98,7 +101,7 @@ var arrayToSet;
             } else if (object[attr] === null) {
                 throw 'Null key attribute: ' + attr;
             } else if (object[attr] in map) {
-                throw 'Duplicate key attribute: ' + attr; 
+                throw 'Duplicate key attribute: ' + attr;
             }
             map[object[attr]] = object;
         }

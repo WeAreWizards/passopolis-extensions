@@ -38,7 +38,7 @@ var __testing__ = {};
         var domain = require('./domain');
         getCanonicalHost = domain.getCanonicalHost;
     } else {
-        assert = window.assert;
+      assert = window.assert;
         getCanonicalHost = window.getCanonicalHost;
     }
 
@@ -97,7 +97,6 @@ var getMaximumElement = function (elements, scoreFunc) {
 
         for (var i = 0; i < elements.length; i++) {
             var score = scoreFunc(elements[i]);
-            //console.log('SCORING:', elements[i], score);
             if (score > maxScore) {
                 maxScore = score;
                 maxElement = elements[i];
@@ -109,7 +108,7 @@ var getMaximumElement = function (elements, scoreFunc) {
 };
 
 // Score a username input field.  Field type is the most important criteria.
-// Having a non-empty value is useful to determine the username when saving a 
+// Having a non-empty value is useful to determine the username when saving a
 // form.
 var usernameScoreFunc = function (a, passwordFieldHint) {
     var score = 0;
@@ -149,10 +148,10 @@ var guessUsernameField = function (elements, passwordFieldHint) {
 };
 
 // Score a password input field.  Field type is the most important criteria.
-// Having a non-empty value is useful to determine the username when saving a 
+// Having a non-empty value is useful to determine the username when saving a
 // form.  Non-password fields are heavily penalized.
 var passwordScoreFunc = function (a) {
-    if (evaluateServerHintsForEntity('password', a) < 0) {  
+    if (evaluateServerHintsForEntity('password', a) < 0) {
         console.log('password: rejected ', a, ' due to server hint');
         return -LARGE_SCORE_VALUE;
     }
@@ -267,8 +266,8 @@ var createFieldDict = function(fields) {
         } else if ($field.is('a')) {
             rval.push({
                 name: $field.attr('id') || $field.attr('class'),
-                id: $field.attr('id'),  
-                'class':$field.attr('class'),              
+                id: $field.attr('id'),
+                'class':$field.attr('class'),
                 type: 'a',
                 value: $field.text(),
                 pointer: $field,
@@ -277,7 +276,7 @@ var createFieldDict = function(fields) {
         } else {
             rval.push({
                 name: $field.attr('name'),
-                id: $field.attr('id'),                
+                id: $field.attr('id'),
                 'class':$field.attr('class'),
                 value: ($field.attr('type') === 'image') ? $field.attr('alt') : $field.prop('value'),
                 type: $field.attr('type') || 'text',
@@ -291,7 +290,7 @@ var createFieldDict = function(fields) {
 };
 
 // Returns a login form dict if input form is a login form, or null otherwise.
-// Setting requireFieldVisibility only considers visible form fields when 
+// Setting requireFieldVisibility only considers visible form fields when
 // looking for username/password/submit fields (default: true).
 var getLoginForm = function (form, requireFieldVisibility) {
     console.log('trying to get login form from ', $(form));
@@ -315,10 +314,10 @@ var getLoginForm = function (form, requireFieldVisibility) {
                 rect.bottom >= 0 && rect.right >= 0
 
                 // TODO: enabling these will ignore login forms that are not in the viewport,
-                // but that's not quite right, because sometimes login forms may 
+                // but that's not quite right, because sometimes login forms may
                 // be outside the user's vision.  What should we do about this?
 
-                // && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) 
+                // && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)
                 // && rect.right <= (window.innerWidth || document.documentElement.clientWidth)
                 ) {
                $fields.push(elem);
@@ -371,7 +370,7 @@ var getLoginForm = function (form, requireFieldVisibility) {
             console.log('rejected ', fieldDict, ' due to server hint');
             return null;
         }
- 
+
         return {usernameField: usernameField,
                 passwordField: passwordField,
                 submitField: submitField,
@@ -456,18 +455,18 @@ var countFieldsOfType = function (fields, type) {
     }
     return count;
 };
-        
+
 // Finds best match for a login form in the current document, or null if no
 // login form is found.
 var guessLoginForm = function (hints) {
     var loginFormScoreFunc = function (formDict) {
         // TODO:
-        
+
         if (evaluateServerHintsForEntity('form', formDict.formDict) < 0) {
             console.log('rejected ', formDict.formDict, ' due to server hint');
             return -LARGE_SCORE_VALUE;
         }
-        
+
 
         if (!formDict) {
             return 0;
@@ -478,7 +477,7 @@ var guessLoginForm = function (hints) {
         if (hints &&
             formDict.usernameField &&
             formDict.usernameField.name === hints.clientData.usernameField &&
-            formDict.passwordField && 
+            formDict.passwordField &&
             formDict.passwordField.name === hints.clientData.passwordField) {
             score += 100;
         }
@@ -486,7 +485,7 @@ var guessLoginForm = function (hints) {
             score += usernameScoreFunc(formDict.usernameField);
         }
         if (!formDict.passwordField && formDict.usernameField.emptyPasswordPermitted) {
-            
+
         } else {
             score += passwordScoreFunc(formDict.passwordField);
         }
@@ -573,23 +572,20 @@ var fillLoginForm = function(formData) {
     setTimeout(function() {
         // Find the form with the username / password
         var sendKeyEvents = function(inputId) {
-
-            // TODO: figure out how to enable this without horrible performance problems
             console.log('dispatching event');
-            var event = new KeyboardEvent('keydown');
-            event.keyCode=13;
-            document.querySelector('#' + inputId).dispatchEvent(event);
-            event = new KeyboardEvent('keypress');
-            event.keyCode=13;
-            document.querySelector('#' + inputId).dispatchEvent(event);
-            event = new KeyboardEvent('keyup');
-            event.keyCode=13;
-            document.querySelector('#' + inputId).dispatchEvent(event);
+            var event = new KeyboardEvent('keydown', {keyCode: 13});
+            var el = document.getElementById(inputId);
+            el.dispatchEvent(event);
+            event = new KeyboardEvent('keypress', {keyCode: 13});
+            el.dispatchEvent(event);
+            event = new KeyboardEvent('keyup', {keyCode: 13});
+            el.dispatchEvent(event);
         };
 
-        var $user_input = formData.usernameField ? formData.usernameField.pointer : formData.usernameField;
+      var $user_input = formData.usernameField ? formData.usernameField.pointer : formData.usernameField;
+      console.log("UI", $user_input);
         if ($user_input) {
-            var $user_form = $user_input.closest("form");
+          var $user_form = $user_input.closest("form");
             $user_input.val(un);
             var userInputId = $user_input.attr('id');
             if (!userInputId) {
@@ -597,6 +593,7 @@ var fillLoginForm = function(formData) {
                 $user_input.attr('id', userInputId);
             }
             setTimeout(function() {
+                $user_input.change();
                 sendKeyEvents(userInputId);
             }, 10);
         }
@@ -616,7 +613,8 @@ var fillLoginForm = function(formData) {
 
 
             setTimeout(function() {
-                sendKeyEvents(passInputId);
+               $pass_input.trigger('change');
+               sendKeyEvents(passInputId);
             }, 20);
             // This call will disable autocomplete and the browser won't offer to save
             // the password on the browser's secure area
@@ -683,9 +681,8 @@ var guessAndFillLoginForm = function (formData) {
         console.log('login form not found');
         return false;
     }
-
     loginForm.loginUrl = formData.clientData.loginUrl;
-    if (loginForm.usernameField) {
+  if (loginForm.usernameField) {
         loginForm.usernameField.value = formData.clientData.username;
     }
     if (loginForm.passwordField) {

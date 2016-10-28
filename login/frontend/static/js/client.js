@@ -103,10 +103,8 @@ var Client = function(address) {
      * before getting to their destinations.
      */
     this.processIncoming = function(message) {
-        if (message.type != 'console_log') {
-            console.log(this.address + ' has got ' + (message.response ? 'response' : 'message') +
+        console.log(this.address + ' has got ' + (message.response ? 'response' : 'message') +
                     ' "' + message.type + '" from ' + message.from);
-        }
 
         // try to handle the message if the message.to addrespos
         // matches the client address (means the message has come
@@ -255,7 +253,7 @@ Client.prototype.dispatchMessage = function (type, data, onSuccess, onError) {
     };
 
     // If running in the background script, call process message directly.
-    if (this.directAccess) {
+  if (this.directAccess) {
         this.background.processAPIMessage(message, responseCallback);
     } else {
         this.sendMessage(message, responseCallback);
@@ -297,8 +295,8 @@ Client.prototype.initApiCalls = function() {
                     var VERY_LARGE_TAB_NUMBER = 999999999;
                     self.background.doLogin(item, VERY_LARGE_TAB_NUMBER);
                 } else {
-                    helper.tabs.getSelected(function(tab) {
-                        self.background.doLogin(item, tab.index + 1);
+                    helper.tabs.query({active: true}, function(tab) {
+                        self.background.doLogin(item, tab[0].index + 1);
                     });
                 }
             });
@@ -624,9 +622,7 @@ Client.prototype.initRemoteExecution = function(from, methods, self) {
                 return false;
             }
 
-            if (method != 'console_log') {
-                console.log('< remote_call > ' + method);
-            }
+            console.log('< remote_call > ' + method);
             if (!_self[method]) {
                 console.log('unknown method' + method);
                 return false;

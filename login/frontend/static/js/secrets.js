@@ -68,6 +68,8 @@ $(document).ready(function () {
         var $button = $(this);
         var $secretItem = $button.closest('.secret');
         var secret = getSecretForListItem($secretItem);
-        executeSecretAction(secret, $button);  // TODO: Adam - remove? This is the only place where execute secret action is being used with button element parameter
+        // TODO: Adam - remove? This is the only place where execute secret action is being used with button element parameter
+        executeSecretAction(secret, $button);
+        return false;
     });
 });

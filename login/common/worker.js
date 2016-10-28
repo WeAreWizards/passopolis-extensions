@@ -28,15 +28,6 @@
 // so we just make a dummy function instead
 // to avoid the exceptions when the console.log is called from the client.js
 var client = null;
-console = {
-    log: function(data) {
-        try {
-            client && client.console_log && client.console_log(Array.prototype.slice.call(arguments));
-        } catch (ignored) {
-        }
-    }
-};
-
 if (typeof(window) === 'undefined') window = {};
 
 importScripts('js/client.js');
@@ -64,7 +55,7 @@ try {
          "sha256.js", "prng.js", "aes.js", "random.js", "pbkdf2.js", "hmac.js",
          "keyczar_util.js","keyczar.js",
          "URI.js", "utils.js", "domain.js", "cookielib.js",
-         "crypto.js", "helpers.js", "mitro_lib.js", "kew.js", "mitroclient.js", 
+         "crypto.js", "helpers.js", "mitro_lib.js", "kew.js", "mitroclient.js",
          "mitro_legacyapi.js", "mitro_fe.js"
         );
 } catch (e) {
@@ -80,7 +71,7 @@ var setExtensionId = function(eid) {
 mitro.fe.setExtensionId = setExtensionId;
 
 
-client.initRemoteCalls('background', ['getNewRSAKeysAsync', 'console_log', 'ajax', 'getRandomness']);
+client.initRemoteCalls('background', ['getNewRSAKeysAsync', 'ajax', 'getRandomness']);
 client.initRemoteExecution('background', ['setExtensionId',  'signMessageAsync',
         'startCacheFiller', 'setFailover', 'setDeviceId', 'getDeviceId', 'getDeviceIdAsync',
         'workerInvokeOnIdentity', 'createIdentity', 'workerCreateIdentity', 'workerLogin',
