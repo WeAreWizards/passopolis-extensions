@@ -1,0 +1,15 @@
+diff --git a/python-lib/cuddlefish/xpi.py b/python-lib/cuddlefish/xpi.py
+index f71f9e4..4186033 100644
+--- a/python-lib/cuddlefish/xpi.py
++++ b/python-lib/cuddlefish/xpi.py
+@@ -172,7 +172,9 @@ def build_xpi(template_root_dir, manifest, xpi_path,
+         if name in dirs_to_create:
+             mkzipdir(zf, name+"/")
+         if name in files_to_copy:
+-            zf.write(files_to_copy[name], name)
++            zinfo = zipfile.ZipInfo(name)
++            with open(files_to_copy[name]) as f:
++                zf.writestr(zinfo, f.read())
+ 
+     # Add extra harness options
+     harness_options = harness_options.copy()
