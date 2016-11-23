@@ -49,7 +49,7 @@ client.addSender('background', function(message){
 try {
     // IMPORTANT: Do not load logging.js here because it captures console.log
     importScripts(
-         "js/config.js",
+         "config.js",
          "lru_cache.js",
          "jsbn.js", "asn1.js", "pkcs1.js", "rsa.js", "oids.js", "pki.js", "util.js", "sha1.js",
          "sha256.js", "prng.js", "aes.js", "random.js", "pbkdf2.js", "hmac.js",

@@ -137,10 +137,10 @@ CHROME_RELEASE_DEPS= \
   $(foreach file,$(STATIC_NONJS_SRCS),$(subst $(STATIC_DIR),$(CHROME_RELEASE_DIR),$(file))) \
   $(foreach file,$(CHROME_IMG_SRCS),$(CHROME_RELEASE_DIR)/img/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(CHROME_RELEASE_DIR),$(file))) \
-  $(CHROME_RELEASE_DIR)/js/helpers.js \
+  $(CHROME_RELEASE_DIR)/helpers.js \
   $(CHROME_RELEASE_DIR)/manifest.json \
   $(CHROME_RELEASE_DIR)/config.js \
-  $(CHROME_RELEASE_DIR)/js/config.js \
+  $(CHROME_RELEASE_DIR)/config.js \
   $(CHROME_RELEASE_DIR)/infobar_html.js \
   $(CHROME_RELEASE_DIR)/css/mitro_popup2.css \
   $(CHROME_RELEASE_DIR)/css/site.css
@@ -150,10 +150,10 @@ CHROME_DEBUG_DEPS= \
   $(foreach file,$(STATIC_NONJS_SRCS),$(subst $(STATIC_DIR),$(CHROME_DEBUG_DIR),$(file))) \
   $(foreach file,$(CHROME_IMG_SRCS),$(CHROME_DEBUG_DIR)/img/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(CHROME_DEBUG_DIR),$(file))) \
-  $(CHROME_DEBUG_DIR)/js/helpers.js \
+  $(CHROME_DEBUG_DIR)/helpers.js \
   $(CHROME_DEBUG_DIR)/manifest.json \
   $(CHROME_DEBUG_DIR)/config.js \
-  $(CHROME_DEBUG_DIR)/js/config.js \
+  $(CHROME_DEBUG_DIR)/config.js \
   $(CHROME_DEBUG_DIR)/infobar_html.js \
   $(CHROME_DEBUG_DIR)/css/mitro_popup2.css \
   $(CHROME_DEBUG_DIR)/css/site.css
@@ -165,10 +165,10 @@ SAFARI_RELEASE_DEPS= \
   $(foreach file,$(SAFARI_IMG_SRCS),$(SAFARI_RELEASE_DIR)/img/$(notdir $(file))) \
   $(foreach file,$(SAFARI_ICON_SRCS),$(SAFARI_RELEASE_DIR)/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(SAFARI_RELEASE_DIR),$(file))) \
-  $(SAFARI_RELEASE_DIR)/js/helpers.js \
+  $(SAFARI_RELEASE_DIR)/helpers.js \
   $(SAFARI_RELEASE_DIR)/Info.plist \
   $(SAFARI_RELEASE_DIR)/config.js \
-  $(SAFARI_RELEASE_DIR)/js/config.js \
+  $(SAFARI_RELEASE_DIR)/config.js \
   $(SAFARI_RELEASE_DIR)/infobar_html.js \
   $(SAFARI_RELEASE_DIR)/css/mitro_popup2.css \
   $(SAFARI_RELEASE_DIR)/css/site.css
@@ -179,10 +179,10 @@ SAFARI_DEBUG_DEPS= \
   $(foreach file,$(SAFARI_IMG_SRCS),$(SAFARI_DEBUG_DIR)/img/$(notdir $(file))) \
   $(foreach file,$(SAFARI_ICON_SRCS),$(SAFARI_DEBUG_DIR)/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(SAFARI_DEBUG_DIR),$(file))) \
-  $(SAFARI_DEBUG_DIR)/js/helpers.js \
+  $(SAFARI_DEBUG_DIR)/helpers.js \
   $(SAFARI_DEBUG_DIR)/Info.plist \
   $(SAFARI_DEBUG_DIR)/config.js \
-  $(SAFARI_DEBUG_DIR)/js/config.js \
+  $(SAFARI_DEBUG_DIR)/config.js \
   $(SAFARI_DEBUG_DIR)/infobar_html.js \
   $(SAFARI_DEBUG_DIR)/css/mitro_popup2.css \
   $(SAFARI_DEBUG_DIR)/css/site.css
@@ -193,10 +193,10 @@ SAFARI_TEST_DEPS= \
   $(foreach file,$(SAFARI_IMG_SRCS),$(SAFARI_TEST_DIR)/img/$(notdir $(file))) \
   $(foreach file,$(SAFARI_ICON_SRCS),$(SAFARI_TEST_DIR)/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(SAFARI_TEST_DIR),$(file))) \
-  $(SAFARI_TEST_DIR)/js/helpers.js \
+  $(SAFARI_TEST_DIR)/helpers.js \
   $(SAFARI_TEST_DIR)/Info.plist \
   $(SAFARI_TEST_DIR)/config.js \
-  $(SAFARI_TEST_DIR)/js/config.js \
+  $(SAFARI_TEST_DIR)/config.js \
   $(SAFARI_TEST_DIR)/infobar_html.js \
   $(SAFARI_TEST_DIR)/css/mitro_popup2.css \
   $(SAFARI_TEST_DIR)/css/site.css
@@ -207,9 +207,9 @@ FIREFOX_RELEASE_DEPS= \
   $(foreach file,$(STATIC_NONJS_SRCS),$(subst $(STATIC_DIR),$(FIREFOX_RELEASE_DIR)/data,$(file))) \
   $(foreach file,$(FIREFOX_IMG_SRCS),$(FIREFOX_RELEASE_DIR)/data/img/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(FIREFOX_RELEASE_DIR)/data,$(file))) \
-  $(FIREFOX_RELEASE_DIR)/data/js/helpers.js \
+  $(FIREFOX_RELEASE_DIR)/data/helpers.js \
   $(FIREFOX_RELEASE_DIR)/data/config.js \
-  $(FIREFOX_RELEASE_DIR)/data/js/config.js \
+  $(FIREFOX_RELEASE_DIR)/data/config.js \
   $(FIREFOX_RELEASE_DIR)/lib/main.js \
   $(FIREFOX_RELEASE_DIR)/package.json \
   $(FIREFOX_RELEASE_DIR)/data/paths.json \
@@ -224,9 +224,9 @@ FIREFOX_DEBUG_DEPS= \
   $(foreach file,$(STATIC_NONJS_SRCS),$(subst $(STATIC_DIR),$(FIREFOX_DEBUG_DIR)/data,$(file))) \
   $(foreach file,$(FIREFOX_IMG_SRCS),$(FIREFOX_DEBUG_DIR)/data/img/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(FIREFOX_DEBUG_DIR)/data,$(file))) \
-  $(FIREFOX_DEBUG_DIR)/data/js/helpers.js \
+  $(FIREFOX_DEBUG_DIR)/data/helpers.js \
   $(FIREFOX_DEBUG_DIR)/data/config.js \
-  $(FIREFOX_DEBUG_DIR)/data/js/config.js \
+  $(FIREFOX_DEBUG_DIR)/data/config.js \
   $(FIREFOX_DEBUG_DIR)/lib/main.js \
   $(FIREFOX_DEBUG_DIR)/package.json \
   $(FIREFOX_DEBUG_DIR)/data/paths.json \
@@ -243,9 +243,9 @@ WEBPAGE_RELEASE_DEPS= \
   $(foreach file,$(WEBPAGE_IMG_SRCS),$(WEBPAGE_RELEASE_DIR)/img/$(notdir $(file))) \
   $(foreach file,$(WEBPAGE_ICON_SRCS),$(WEBPAGE_RELEASE_DIR)/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(WEBPAGE_RELEASE_DIR),$(file))) \
-  $(WEBPAGE_RELEASE_DIR)/js/helpers.js \
+  $(WEBPAGE_RELEASE_DIR)/helpers.js \
   $(WEBPAGE_RELEASE_DIR)/config.js \
-  $(WEBPAGE_RELEASE_DIR)/js/config.js \
+  $(WEBPAGE_RELEASE_DIR)/config.js \
   $(WEBPAGE_RELEASE_DIR)/css/mitro_popup2.css \
   $(WEBPAGE_RELEASE_DIR)/css/site.css \
   $(WEBPAGE_RELEASE_DIR)/index.html \
@@ -257,9 +257,9 @@ WEBPAGE_DEBUG_DEPS= \
   $(foreach file,$(WEBPAGE_IMG_SRCS),$(WEBPAGE_DEBUG_DIR)/img/$(notdir $(file))) \
   $(foreach file,$(WEBPAGE_ICON_SRCS),$(WEBPAGE_DEBUG_DIR)/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(WEBPAGE_DEBUG_DIR),$(file))) \
-  $(WEBPAGE_DEBUG_DIR)/js/helpers.js \
+  $(WEBPAGE_DEBUG_DIR)/helpers.js \
   $(WEBPAGE_DEBUG_DIR)/config.js \
-  $(WEBPAGE_DEBUG_DIR)/js/config.js \
+  $(WEBPAGE_DEBUG_DIR)/config.js \
   $(WEBPAGE_DEBUG_DIR)/css/mitro_popup2.css \
   $(WEBPAGE_DEBUG_DIR)/css/site.css \
   $(WEBPAGE_DEBUG_DIR)/index.html \
@@ -271,9 +271,9 @@ WEBPAGE_TEST_DEPS= \
   $(foreach file,$(WEBPAGE_IMG_SRCS),$(WEBPAGE_TEST_DIR)/img/$(notdir $(file))) \
   $(foreach file,$(WEBPAGE_ICON_SRCS),$(WEBPAGE_TEST_DIR)/$(notdir $(file))) \
   $(foreach file,$(GEN_SRCS),$(subst $(GEN_DIR),$(WEBPAGE_TEST_DIR),$(file))) \
-  $(WEBPAGE_TEST_DIR)/js/helpers.js \
+  $(WEBPAGE_TEST_DIR)/helpers.js \
   $(WEBPAGE_TEST_DIR)/config.js \
-  $(WEBPAGE_TEST_DIR)/js/config.js \
+  $(WEBPAGE_TEST_DIR)/config.js \
   $(WEBPAGE_TEST_DIR)/css/mitro_popup2.css \
   $(WEBPAGE_TEST_DIR)/css/site.css \
   $(WEBPAGE_TEST_DIR)/index.html \
@@ -363,7 +363,7 @@ $(CHROME_BUILD_DIR)/test.crx: $(CHROME_DEBUG_DEPS) $(CHROME_CONFIG)
 	rm -rf $(CHROME_TEST_DIR)
 	cp -r $(CHROME_DEBUG_DIR) $(CHROME_TEST_DIR)
 	cat $(TEST_CONFIG) $(CHROME_CONFIG) > $(CHROME_TEST_DIR)/config.js
-	cat $(TEST_CONFIG) $(CHROME_CONFIG) > $(CHROME_TEST_DIR)/js/config.js
+	cat $(TEST_CONFIG) $(CHROME_CONFIG) > $(CHROME_TEST_DIR)/config.js
 	$(GOOGLE_CHROME) --pack-extension=$(CHROME_TEST_DIR)
 	rm -f $(CHROME_BUILD_DIR)/test.pem
 
@@ -408,8 +408,8 @@ $(SAFARI_TEST_DIR)/background.js:
 $(SAFARI_TEST_DIR)/helpers.js:
 	cat $(dir $(SAFARI_SRCS))helpers.js $(dir $(SAFARI_SRCS))helpers-test-specific.js > $(SAFARI_TEST_DIR)/helpers.js
 
-$(SAFARI_TEST_DIR)/js/helpers.js:
-	cat $(dir $(SAFARI_SRCS))helpers.js $(dir $(SAFARI_SRCS))helpers-test-specific.js > $(SAFARI_TEST_DIR)/js/helpers.js
+$(SAFARI_TEST_DIR)/helpers.js:
+	cat $(dir $(SAFARI_SRCS))helpers.js $(dir $(SAFARI_SRCS))helpers-test-specific.js > $(SAFARI_TEST_DIR)/helpers.js
 
 # FIREFOX_JS_SRCS
 $(foreach file,$(filter-out $(MINIFIED_SRCS),$(FIREFOX_JS_SRCS)),$(eval $(call CLOSURE_COMPILER_RULE,$(file),$(FIREFOX_RELEASE_DIR)/data/$(notdir $(file)))))
@@ -555,44 +555,44 @@ $(WEBPAGE_TEST_DIR)/background.html:
 # Config files
 $(CHROME_RELEASE_DIR)/config.js: $(RELEASE_CONFIG) | $(CHROME_RELEASE_DIR)
 	cat $(RELEASE_CONFIG) $(CHROME_CONFIG) > $(CHROME_RELEASE_DIR)/config.js
-$(CHROME_RELEASE_DIR)/js/config.js: $(RELEASE_CONFIG) | $(CHROME_RELEASE_DIR)/js
-	cat $(RELEASE_CONFIG) $(CHROME_CONFIG) > $(CHROME_RELEASE_DIR)/js/config.js
+$(CHROME_RELEASE_DIR)/config.js: $(RELEASE_CONFIG) | $(CHROME_RELEASE_DIR)/js
+	cat $(RELEASE_CONFIG) $(CHROME_CONFIG) > $(CHROME_RELEASE_DIR)/config.js
 $(CHROME_DEBUG_DIR)/config.js: $(DEBUG_CONFIG) | $(CHROME_DEBUG_DIR)
 	cat $(DEBUG_CONFIG) $(CHROME_CONFIG) > $(CHROME_DEBUG_DIR)/config.js
-$(CHROME_DEBUG_DIR)/js/config.js: $(DEBUG_CONFIG) | $(CHROME_DEBUG_DIR)/js
-	cat $(DEBUG_CONFIG) $(CHROME_CONFIG) > $(CHROME_DEBUG_DIR)/js/config.js
+$(CHROME_DEBUG_DIR)/config.js: $(DEBUG_CONFIG) | $(CHROME_DEBUG_DIR)/js
+	cat $(DEBUG_CONFIG) $(CHROME_CONFIG) > $(CHROME_DEBUG_DIR)/config.js
 $(SAFARI_RELEASE_DIR)/config.js: $(RELEASE_CONFIG) | $(SAFARI_RELEASE_DIR)
 	cat $(RELEASE_CONFIG) $(SAFARI_CONFIG) > $(SAFARI_RELEASE_DIR)/config.js
-$(SAFARI_RELEASE_DIR)/js/config.js: $(RELEASE_CONFIG) | $(SAFARI_RELEASE_DIR)/js
-	cat $(RELEASE_CONFIG) $(SAFARI_CONFIG) > $(SAFARI_RELEASE_DIR)/js/config.js
+$(SAFARI_RELEASE_DIR)/config.js: $(RELEASE_CONFIG) | $(SAFARI_RELEASE_DIR)/js
+	cat $(RELEASE_CONFIG) $(SAFARI_CONFIG) > $(SAFARI_RELEASE_DIR)/config.js
 $(SAFARI_DEBUG_DIR)/config.js: $(DEBUG_CONFIG) | $(SAFARI_DEBUG_DIR)
 	cat $(DEBUG_CONFIG) $(SAFARI_CONFIG) > $(SAFARI_DEBUG_DIR)/config.js
-$(SAFARI_DEBUG_DIR)/js/config.js: $(DEBUG_CONFIG) | $(SAFARI_DEBUG_DIR)/js
-	cat $(DEBUG_CONFIG) $(SAFARI_CONFIG) > $(SAFARI_DEBUG_DIR)/js/config.js
+$(SAFARI_DEBUG_DIR)/config.js: $(DEBUG_CONFIG) | $(SAFARI_DEBUG_DIR)/js
+	cat $(DEBUG_CONFIG) $(SAFARI_CONFIG) > $(SAFARI_DEBUG_DIR)/config.js
 $(SAFARI_TEST_DIR)/config.js: $(TEST_CONFIG) | $(SAFARI_TEST_DIR)
 	cat $(TEST_CONFIG) $(SAFARI_CONFIG) $(SAFARI_TEST_CONFIG) > $(SAFARI_TEST_DIR)/config.js
-$(SAFARI_TEST_DIR)/js/config.js: $(TEST_CONFIG) | $(SAFARI_TEST_DIR)/js
-	cat $(TEST_CONFIG) $(SAFARI_CONFIG) $(SAFARI_TEST_CONFIG) > $(SAFARI_TEST_DIR)/js/config.js
+$(SAFARI_TEST_DIR)/config.js: $(TEST_CONFIG) | $(SAFARI_TEST_DIR)/js
+	cat $(TEST_CONFIG) $(SAFARI_CONFIG) $(SAFARI_TEST_CONFIG) > $(SAFARI_TEST_DIR)/config.js
 $(FIREFOX_RELEASE_DIR)/data/config.js: $(RELEASE_CONFIG) | $(FIREFOX_RELEASE_DIR)
 	cat $(RELEASE_CONFIG) $(FIREFOX_CONFIG) > $(FIREFOX_RELEASE_DIR)/data/config.js
-$(FIREFOX_RELEASE_DIR)/data/js/config.js: $(RELEASE_CONFIG) | $(FIREFOX_RELEASE_DIR)
-	cat $(RELEASE_CONFIG) $(FIREFOX_CONFIG) > $(FIREFOX_RELEASE_DIR)/data/js/config.js
+$(FIREFOX_RELEASE_DIR)/data/config.js: $(RELEASE_CONFIG) | $(FIREFOX_RELEASE_DIR)
+	cat $(RELEASE_CONFIG) $(FIREFOX_CONFIG) > $(FIREFOX_RELEASE_DIR)/data/config.js
 $(FIREFOX_DEBUG_DIR)/data/config.js: $(DEBUG_CONFIG) | $(FIREFOX_DEBUG_DIR)
 	cat $(DEBUG_CONFIG) $(FIREFOX_CONFIG) > $(FIREFOX_DEBUG_DIR)/data/config.js
-$(FIREFOX_DEBUG_DIR)/data/js/config.js: $(DEBUG_CONFIG) | $(FIREFOX_DEBUG_DIR)
-	cat $(DEBUG_CONFIG) $(FIREFOX_CONFIG) > $(FIREFOX_DEBUG_DIR)/data/js/config.js
+$(FIREFOX_DEBUG_DIR)/data/config.js: $(DEBUG_CONFIG) | $(FIREFOX_DEBUG_DIR)
+	cat $(DEBUG_CONFIG) $(FIREFOX_CONFIG) > $(FIREFOX_DEBUG_DIR)/data/config.js
 $(WEBPAGE_RELEASE_DIR)/config.js: $(RELEASE_CONFIG) | $(WEBPAGE_RELEASE_DIR)
 	cat $(RELEASE_CONFIG) $(WEBPAGE_CONFIG) > $(WEBPAGE_RELEASE_DIR)/config.js
-$(WEBPAGE_RELEASE_DIR)/js/config.js: $(RELEASE_CONFIG) | $(WEBPAGE_RELEASE_DIR)/js
-	cat $(RELEASE_CONFIG) $(WEBPAGE_CONFIG) > $(WEBPAGE_RELEASE_DIR)/js/config.js
+$(WEBPAGE_RELEASE_DIR)/config.js: $(RELEASE_CONFIG) | $(WEBPAGE_RELEASE_DIR)/js
+	cat $(RELEASE_CONFIG) $(WEBPAGE_CONFIG) > $(WEBPAGE_RELEASE_DIR)/config.js
 $(WEBPAGE_DEBUG_DIR)/config.js: $(DEBUG_CONFIG) | $(WEBPAGE_DEBUG_DIR)
 	cat $(DEBUG_CONFIG) $(WEBPAGE_CONFIG) > $(WEBPAGE_DEBUG_DIR)/config.js
-$(WEBPAGE_DEBUG_DIR)/js/config.js: $(DEBUG_CONFIG) | $(WEBPAGE_DEBUG_DIR)/js
-	cat $(DEBUG_CONFIG) $(WEBPAGE_CONFIG) > $(WEBPAGE_DEBUG_DIR)/js/config.js
+$(WEBPAGE_DEBUG_DIR)/config.js: $(DEBUG_CONFIG) | $(WEBPAGE_DEBUG_DIR)/js
+	cat $(DEBUG_CONFIG) $(WEBPAGE_CONFIG) > $(WEBPAGE_DEBUG_DIR)/config.js
 $(WEBPAGE_TEST_DIR)/config.js: $(TEST_CONFIG) | $(WEBPAGE_TEST_DIR)
 	cat $(TEST_CONFIG) $(WEBPAGE_CONFIG) $(WEBPAGE_TEST_CONFIG) > $(WEBPAGE_TEST_DIR)/config.js
-$(WEBPAGE_TEST_DIR)/js/config.js: $(TEST_CONFIG) | $(WEBPAGE_TEST_DIR)/js
-	cat $(TEST_CONFIG) $(WEBPAGE_CONFIG) $(WEBPAGE_TEST_CONFIG) > $(WEBPAGE_TEST_DIR)/js/config.js
+$(WEBPAGE_TEST_DIR)/config.js: $(TEST_CONFIG) | $(WEBPAGE_TEST_DIR)/js
+	cat $(TEST_CONFIG) $(WEBPAGE_CONFIG) $(WEBPAGE_TEST_CONFIG) > $(WEBPAGE_TEST_DIR)/config.js
 
 # Firefox main script
 $(FIREFOX_RELEASE_DIR)/data/package.json: $(FIREFOX_MAIN_SCRIPT_PATHS) | $(FIREFOX_RELEASE_DIR)/data

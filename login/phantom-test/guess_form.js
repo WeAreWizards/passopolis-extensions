@@ -109,7 +109,7 @@ var pageOpened = pageNavigator.open(url);
 //   return pageNavigator.waitForRedirects();
 // });
 var submittedForm = pageOpened.then(function() {
-  pageNavigator.page.injectJs('../frontend/static/js/jquery.min.js');
+  pageNavigator.page.injectJs('../frontend/static/jquery.min.js');
   pageNavigator.page.injectJs('../common/domain.js');
   pageNavigator.page.injectJs('../common/URI.js');
   pageNavigator.page.injectJs('../common/utils.js');

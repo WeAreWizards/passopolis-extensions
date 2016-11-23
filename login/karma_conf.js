@@ -48,7 +48,7 @@ module.exports = function(config) {
       // breaks in PhantomJS due to missing Function.prototype.bind
       'frontend/static/js/import-common_test.js',
 
-      'frontend/static/js/jquery.min.js',
+      'frontend/static/jquery.min.js',
       'frontend/static/js/keypass.js',
       'frontend/static/js/keypass_browsertest.js',
 

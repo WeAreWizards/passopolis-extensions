@@ -28,7 +28,7 @@ let
     CHROME = true; // Not chrome but we pretend it is
   '';
 
-  firefox-44-manifest = writeText "manifest.json" (import ./firefox-44-manifest.json.nix { version = "2015.9.22";});
+  firefox-44-manifest = writeText "manifest.json" (import ./firefox-44-manifest.json.nix { version = "2016.11.23";});
 
   firefox-package-js = writeText "package.js" ''
   {

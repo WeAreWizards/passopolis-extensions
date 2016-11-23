@@ -28,12 +28,10 @@ stdenv.mkDerivation {
 
     cp common/*.js ext/
     cp firefox44/*.js ext/
-    cp firefox44/*.js ext/js/
     cp ../api/js/cli/*.js ext/
 
     # TODO config in two places?
     cp ${firefox-44-config} ext/config.js
-    cp ${firefox-44-config} ext/js/config.js
 
     cp -r ./frontend/static/css/ ext/css
     cp -r ./frontend/static/fonts/ ext/fonts
