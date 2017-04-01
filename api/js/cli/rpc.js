@@ -60,6 +60,7 @@ var mitro = mitro || {};
         complete: function (response) {
           try {
             var rval = JSON.parse(response.text);
+            rval.status = response.status;
             if(response.status === 200){
               onSuccess(rval);
             } else {
