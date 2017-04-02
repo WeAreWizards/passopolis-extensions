@@ -79,7 +79,7 @@ function evaluateServerHintsForEntity(type, fieldDict) {
   return 0;
 };
 
-function getMaximumElement(elements, scoreFunc): Object {
+function getMaximumElement(elements, scoreFunc): null | Object {
   if (elements) {
     var maxScore = -1;
     var maxElement = null;
@@ -125,7 +125,7 @@ var usernameScoreFunc = function (a, passwordFieldHint) {
   return score;
 };
 
-var guessUsernameField = function (elements, passwordFieldHint) {
+function guessUsernameField(elements: Array<Element>, passwordFieldHint: Object) {
   var usernameField = getMaximumElement(elements, function(a) {return usernameScoreFunc(a, passwordFieldHint);});
   // Enforce a minimum threshold to prevent really bad guesses.
   if (usernameField !== null && usernameScoreFunc(usernameField) > 0) {
@@ -163,7 +163,9 @@ var passwordScoreFunc = function (a) {
   return score;
 };
 
-var guessPasswordField = function (elements) {
+type Element = any // TODO(tom)
+
+function guessPasswordField(elements: Array<Element>) {
   var passwordField = getMaximumElement(elements, passwordScoreFunc);
 
   if (passwordField !== null && passwordScoreFunc(passwordField) > 0) {
@@ -236,8 +238,8 @@ var guessSubmitField = function (elements, allowImageButtons, $preferAfterThisFi
 };
 
 
-var createFieldDict = function(fields) {
-  var rval = [];
+function createFieldDict(fields) {
+  var rval: Array<Object> = []; // TODO Object could be more specific
 
   for (var i = 0; i < fields.length; ++i) {
     var $field = $(fields[i]);
@@ -281,7 +283,7 @@ var createFieldDict = function(fields) {
 // Returns a login form dict if input form is a login form, or null otherwise.
 // Setting requireFieldVisibility only considers visible form fields when
 // looking for username/password/submit fields (default: true).
-var getLoginForm = function (form, requireFieldVisibility) {
+function getLoginForm(form: Form, requireFieldVisibility: boolean) {
   console.log('trying to get login form from ', $(form));
   if (typeof requireFieldVisibility === 'undefined') {
     requireFieldVisibility = true;
@@ -319,6 +321,7 @@ var getLoginForm = function (form, requireFieldVisibility) {
   if (SERVER_HINTS && SERVER_HINTS.additional_submit_button_ids) {
     for (var i = 0; i < SERVER_HINTS.additional_submit_button_ids.length; ++i) {
       assert (SERVER_HINTS.additional_submit_button_ids[i].indexOf(' ') === -1);
+      // $FlowFixMe
       $fields = $fields.add($('#' + SERVER_HINTS.additional_submit_button_ids[i]));
     }
   }
@@ -326,6 +329,7 @@ var getLoginForm = function (form, requireFieldVisibility) {
 
   var passwordField = guessPasswordField(fieldsRecord);
   var usernameField = null;
+
   // TODO: for debugging.
   //SERVER_HINTS.empty_password_username_selector = 'input[type=text]#un';
   var goAhead = !!passwordField;
@@ -347,6 +351,7 @@ var getLoginForm = function (form, requireFieldVisibility) {
     var submitField = guessSubmitField(
       fieldsRecord, true, usernameField && usernameField.pointer);
 
+    // $FlowFixMe
     var fieldDict = createFieldDict((passwordField ? passwordField : usernameField).pointer.closest('form'));
 
     // we need to find a form.
@@ -492,7 +497,7 @@ function guessLoginForm(hints: Object) {
   const scoringFunction = loginFormScoreFunc;
   const forms = $('form').map(function () {
     console.log('mapping for ', this);
-    return getLoginForm(this);
+    return getLoginForm(this, false);
   });
   const loginForm = getMaximumElement(forms, scoringFunction);
   if (loginForm && scoringFunction(loginForm) < 0) {
@@ -519,7 +524,7 @@ function isInputPresentAndVisible(name: string) {
 type Form = any // TODO(tom)
 
 function isLoginForm(form: Form) {
-  return getLoginForm(form) !== null;
+  return getLoginForm(form, false) !== null;
 };
 
 function isLoginPage () {
