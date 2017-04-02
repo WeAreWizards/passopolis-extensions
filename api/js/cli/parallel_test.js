@@ -24,16 +24,17 @@
  * *****************************************************************************
  */
 
-lib = require('./mitro_lib');
+import * as mitro_lib from "./mitro_lib";
+
 function arraysEqual(a1,a2) {
     return JSON.stringify(a1)==JSON.stringify(a2);
 }
 
 var failIfThree = function(val, s,e) {
   setTimeout(function() {
-    if (val ===3) 
-      e(3); 
-    else 
+    if (val ===3)
+      e(3);
+    else
       s(1);
   }, 100);
 };
@@ -46,7 +47,7 @@ lib.parallel([
   [failIfThree, [3]]
   ], failIfRun,
 
-  function(r) { 
+  function(r) {
     (r===3) || (failIfRun());
   });
 
@@ -55,9 +56,9 @@ lib.parallel([
   [failIfThree, [1]],
   [failIfThree, [2]],
   [failIfThree, [2]]
-  ], 
-  function(r) { 
-    if (!arraysEqual(r, [1,1,1])) 
+  ],
+  function(r) {
+    if (!arraysEqual(r, [1,1,1]))
       failIfRun();
   },
     failIfRun);
