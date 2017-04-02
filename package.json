@@ -1,7 +1,7 @@
 {
   "name": "mitro-cli",
   "version": "1.0.0",
-  "description": "Mitro javascript cli dependencies only used for nix test suites",
+  "description": "node dependencies required for building CLI",
   "author": "Passopolis <team@passopolis.com>",
   "dependencies": {
     "hogan": "^1.0.2",
