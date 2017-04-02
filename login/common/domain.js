@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -23,18 +24,20 @@
  *     You can contact the authors at inbound@mitro.co.
  * *****************************************************************************
  */
+import { URI } from './URI';
 
-var getCanonicalHost;
+let getCanonicalHost: (string) => string;
+
 (function () {
     'use strict';
 
     // From the URL
-    getCanonicalHost = function(full_url) {
+    getCanonicalHost = function(full_url: string) {
         var host = new URI(full_url).getAuthority();
         if (!host) {
           return "";
         }
-        // Cookies are not isolated by port, but the chrome cookies API will not 
+        // Cookies are not isolated by port, but the chrome cookies API will not
         // match the domain if the port is included.
         var index = host.indexOf(':');
         if (index !== -1) {
