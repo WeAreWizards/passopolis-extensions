@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -24,36 +25,14 @@
  * *****************************************************************************
  */
 
-/* Mitro Client: a client API that is compiled and tested using the Closure Compiler. */
-/** @suppress{duplicate} */
-var mitro = mitro || {};
-/** @suppress{duplicate} */
-var kew = kew || require('./kew');
+import * as kew from "./kew";
+import { assert } from "./assert";
 
-/**
-@param {!mitro.LegacyAPI} legacyApi makes requests with the old API.
-@constructor
-*/
-mitro.Client = function(legacyApi) {
-  /**
-  @type {!mitro.LegacyAPI}
-  @private
-  */
+const Client = function(legacyApi: string) {
   this.legacyApi = legacyApi;
 };
 
-/** @param {boolean} expressionResult */
-mitro.assert = function(expressionResult) {
-  if (!expressionResult) {
-    throw new Error('Assertion failed');
-  }
-};
-
-/**
-@param {number} numKeys
-@returns {!kew.Promise}
-*/
-mitro.Client.prototype.getRSAKeys = function(numKeys) {
+Client.prototype.getRSAKeys = function(numKeys) {
   var d = kew.defer();
   this.legacyApi.getNewRSAKeysAsync(numKeys, function(keys) {
     d.resolve(keys);
@@ -94,7 +73,7 @@ var getAndDecryptGroupKey = function(legacyApi, groupData) {
 @param {mitro.Transaction} transaction transaction this request belongs to (or null).
 @returns {!kew.Promise}
 */
-mitro.Client.prototype.getGroupKey = function(groupId, transaction) {
+Client.prototype.getGroupKey = function(groupId, transaction) {
   var groupPromise = new kew.Promise();
   var legacyApi = this.legacyApi;
   legacyApi.getGroup(groupId, transaction, function(groupData) {
@@ -115,7 +94,7 @@ mitro.Client.prototype.getGroupKey = function(groupId, transaction) {
 @param {mitro.Transaction} transaction transaction this request belongs to (or null).
 @returns {!kew.Promise}
 */
-mitro.Client.prototype.getPublicKeys = function(identities, transaction) {
+Client.prototype.getPublicKeys = function(identities, transaction) {
   var d = kew.defer();
   var legacyApi = this.legacyApi;
   legacyApi.getPublicKeys(identities, transaction, function(publicKeys) {
@@ -139,7 +118,7 @@ mitro.Client.prototype.getPublicKeys = function(identities, transaction) {
 @param {mitro.Transaction} transaction transaction this request belongs to (or null).
 @returns {!kew.Promise}
 */
-mitro.Client.prototype.postSigned = function(path, request, transaction) {
+Client.prototype.postSigned = function(path, request, transaction) {
   var d = kew.defer();
   this.legacyApi.postSigned(path, request, transaction, function(result) {
     d.resolve(result);
@@ -157,13 +136,13 @@ mitro.Client.prototype.postSigned = function(path, request, transaction) {
 @param {function(!Object)} onSuccess
 @param {function(!Error)} onError
 */
-mitro.Client.prototype.createOrganization = function(name, admins, members, onSuccess, onError) {
+Client.prototype.createOrganization = function(name, admins, members, onSuccess, onError) {
   // TODO: local parameter validation?
   var client = this;  // avoids this scoping "fun" in nested functions
 
   // get public keys and generate keys for the org, admins and members (in parallel)
-  var combinedUsers = mitro.combineUniqueUsers(admins, members);
-  mitro.assert(combinedUsers.length == admins.length + members.length);
+  var combinedUsers = combineUniqueUsers(admins, members);
+  assert(combinedUsers.length == admins.length + members.length);
   var publicKeysPromise = client.getPublicKeys(combinedUsers, null);
 
   var numKeys = 1 + combinedUsers.length;
@@ -175,7 +154,7 @@ mitro.Client.prototype.createOrganization = function(name, admins, members, onSu
     // build and send the create organization request
     var publicKeys = resultArray[0];
     var keys = resultArray[1];
-    var request = mitro.makeOrganizationRequest(
+    var request = makeOrganizationRequest(
       client.legacyApi, name, admins, members, keys, publicKeys);
     return client.postSigned('/mitro-core/api/CreateOrganization', request, null);
   });
@@ -188,12 +167,7 @@ mitro.Client.prototype.createOrganization = function(name, admins, members, onSu
   }).done();
 };
 
-/** Returns an Array of unique users from admins and members.
-@param {!Array.<string>} admins
-@param {!Array.<string>} members
-@return {!Array.<string>}
-*/
-mitro.combineUniqueUsers = function(admins, members) {
+function combineUniqueUsers(admins, members) {
   var combined = admins.concat(members);
   var uniqueUsers = {};
   for (var i = 0; i < combined.length; i++) {
@@ -203,7 +177,7 @@ mitro.combineUniqueUsers = function(admins, members) {
     }
   }
   return Object.getOwnPropertyNames(uniqueUsers);
-};
+}
 
 /** Returns a correctly initialized CreateOrganizationRequest object.
 @param {!mitro.LegacyAPI} legacyApi
@@ -214,21 +188,21 @@ mitro.combineUniqueUsers = function(admins, members) {
 @param {!Object.<string, !mitro.CryptoKey>} publicKeys
 @returns {!mitro.CreateOrganizationRequest}
 */
-mitro.makeOrganizationRequest = function(
+function makeOrganizationRequest(
     legacyApi, name, admins, members, generatedKeys, publicKeys) {
   var organizationKey = generatedKeys.pop();
   var i;
-  var request = new mitro.CreateOrganizationRequest();
+  var request = new CreateOrganizationRequest();
   request.name = name;
   request.publicKey = organizationKey.exportPublicKey().toJson();
 
   // Give each admin access to the organization key
-  request.adminEncryptedKeys = mitro.encryptOrganizationKeyForAdmins(
+  request.adminEncryptedKeys = encryptOrganizationKeyForAdmins(
     legacyApi, organizationKey, admins, publicKeys);
 
   // Give each member a private group
-  var combinedUsers = mitro.combineUniqueUsers(admins, members);
-  request.memberGroupKeys = mitro.createOrganizationMemberGroups(
+  var combinedUsers = combineUniqueUsers(admins, members);
+  request.memberGroupKeys = createOrganizationMemberGroups(
     legacyApi, combinedUsers, organizationKey, publicKeys, generatedKeys);
 
   return request;
@@ -241,7 +215,7 @@ mitro.makeOrganizationRequest = function(
 @param {!Object.<string, !mitro.CryptoKey>} publicKeys map of emails to public keys.
 @returns {!Object.<string, string>}
 */
-mitro.encryptOrganizationKeyForAdmins = function(legacyApi, organizationKey, admins, publicKeys) {
+function encryptOrganizationKeyForAdmins(legacyApi, organizationKey, admins, publicKeys) {
   var organizationKeyJson = organizationKey.toJson();
   var result = {};
 
@@ -276,16 +250,16 @@ the organization and the member.
 @param {!Array.<!mitro.CryptoKey>} generatedKeys list of available generated private keys.
 @return {!Object.<string, !mitro.PrivateGroupKeys>}
 */
-mitro.createOrganizationMemberGroups = function(
+function createOrganizationMemberGroups(
     legacyApi, members, organizationKey, publicKeys, generatedKeys) {
-  mitro.assert(generatedKeys.length >= members.length);
+  assert(generatedKeys.length >= members.length);
   var result = {};
 
   for (var i = 0; i < members.length; i++) {
     var privateGroupKey = generatedKeys.pop();
     var privateGroupKeyJson = privateGroupKey.toJson();
 
-    var memberPrivateGroup = new mitro.PrivateGroupKeys();
+    var memberPrivateGroup = new PrivateGroupKeys();
     memberPrivateGroup.publicKey = privateGroupKey.exportPublicKey().toJson();
     memberPrivateGroup.keyEncryptedForUser =
         encryptForUser(legacyApi, privateGroupKeyJson, members[i], publicKeys);
@@ -306,11 +280,11 @@ The server will verify these properties.
 @param {function(!Object)} onSuccess
 @param {function(!Error)} onError
 */
-mitro.Client.prototype.mutateOrganization = function(request, transaction, onSuccess, onError) {
+Client.prototype.mutateOrganization = function(request, transaction, onSuccess, onError) {
   var client = this;  // avoids this scoping issues in nested functions
 
   // get public keys for all users
-  var uniqueAddedUsers = mitro.combineUniqueUsers(request.membersToPromote, request.newMembers);
+  var uniqueAddedUsers = combineUniqueUsers(request.membersToPromote, request.newMembers);
   var publicKeysPromise = client.getPublicKeys(uniqueAddedUsers, transaction);
 
   var numKeys = uniqueAddedUsers.length;
@@ -333,7 +307,7 @@ mitro.Client.prototype.mutateOrganization = function(request, transaction, onSuc
     var publicKeys = resultArray[0][0];
     var orgGroupKey = resultArray[0][1];
     var generatedKeys = resultArray[1];
-    var rpc = mitro.makeMutateOrganizationRequestRpc(
+    var rpc = makeMutateOrganizationRequestRpc(
       client.legacyApi, request, orgGroupKey, publicKeys, generatedKeys);
     return client.postSigned('/mitro-core/api/MutateOrganization', rpc, transaction);
   });
@@ -354,16 +328,16 @@ mitro.Client.prototype.mutateOrganization = function(request, transaction, onSuc
 @param {!Array.<!mitro.CryptoKey>} generatedKeys
 @returns {!mitro.MutateOrganizationRequestRpc}
 */
-mitro.makeMutateOrganizationRequestRpc = function(
+function makeMutateOrganizationRequestRpc(
     legacyApi, request, organizationKey, publicKeys, generatedKeys) {
-  var rpc = new mitro.MutateOrganizationRequestRpc();
+  var rpc = new MutateOrganizationRequestRpc();
   rpc.orgId = request.orgId;
 
-  rpc.promotedMemberEncryptedKeys = mitro.encryptOrganizationKeyForAdmins(
+  rpc.promotedMemberEncryptedKeys = encryptOrganizationKeyForAdmins(
     legacyApi, organizationKey, request.membersToPromote, publicKeys);
 
   // Give each member a private group
-  rpc.newMemberGroupKeys = mitro.createOrganizationMemberGroups(
+  rpc.newMemberGroupKeys = createOrganizationMemberGroups(
     legacyApi, request.newMembers, organizationKey, publicKeys, generatedKeys);
 
   rpc.adminsToDemote = request.adminsToDemote;
@@ -376,7 +350,7 @@ mitro.makeMutateOrganizationRequestRpc = function(
 @constructor
 @struct
 */
-mitro.PrivateGroupKeys = function() {
+function PrivateGroupKeys() {
   /** @type {string|null} */
   this.publicKey = null;
   /** @type {string|null} */
@@ -389,7 +363,7 @@ mitro.PrivateGroupKeys = function() {
 @constructor
 @struct
 */
-mitro.CreateOrganizationRequest = function() {
+function CreateOrganizationRequest() {
   /**
   @type {string|null}
   */
@@ -412,7 +386,7 @@ mitro.CreateOrganizationRequest = function() {
 @constructor
 @struct
 */
-mitro.MutateOrganizationRequestRpc = function() {
+function MutateOrganizationRequestRpc() {
   /** @type {number} */
   this.orgId = 0;
   /** @type {!Object.<string, string>} */
@@ -425,7 +399,4 @@ mitro.MutateOrganizationRequestRpc = function() {
   this.membersToRemove = [];
 };
 
-// exports for node
-if (typeof(module) !== 'undefined' && module.exports) {
-  module.exports = mitro;
-}
+export { Client };

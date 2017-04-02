@@ -4,7 +4,7 @@ This is an ongoing process. You will need [flow](https://flow.org/) and yarn. To
 
 ```
 yarn install
-node_modules/.bin/babel login/ --out-dir build
+node_modules/.bin/babel login/ --watch --out-dir build
 ```
 
 # Contributing

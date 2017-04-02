@@ -24,53 +24,16 @@
  * *****************************************************************************
  */
 
-/** @suppress{duplicate} */
-var keyczar = keyczar || require('keyczarjs');
-/** @suppress{duplicate} */
-var mitro = mitro || {};
-/** @suppress{duplicate} */
-var forge = forge || require('node-forge');
-(function() {
-mitro.fe = {};
-var keyCache = null;
-if(typeof(module) !== 'undefined' && module.exports) {
-  /// NODE module
-  mitro = {
-    lib: require('./mitro_lib.js'),
-    keycache: require('./keycache'),
-    fs : require('fs'),
-    log : require('./logging')
-  };
+let keyCache = null;
+let FAILOVER_MITRO_HOST = null;
+let FAILOVER_MITRO_PORT = null;
+let DEVICE_ID = null;
 
-  var mitroClientModule = require('./mitroclient');
-  mitro.Client = mitroClientModule.Client;
+import * as crypto from "./crypto";
+import * as mitro_lib from "./mitro_lib";
+import * as mitro_legacyapi from "./mitro_legacyapi";
 
-  module.exports = mitro.fe = {};
-
-  mitro.fe.initCacheFromFile = function(cacheFileName) {
-    try {
-      keyCache = mitro.keycache.MakeKeyCache();
-      keyCache.loadFromJson(mitro.fs.readFileSync(cacheFileName));
-      console.log('loaded ' + keyCache.size() + ' keys');
-    } catch (e) {
-      console.log('could not read from key cache file '+ cacheFileName+'... using default');
-      console.log(e);
-      console.log(e.stack);
-    }
-  };
-
-  mitro.fe.startCacheFiller = function() {
-    keyCache = mitro.keycache.MakeKeyCache();
-    mitro.keycache.startFiller(keyCache);
-  };
-
-  mitro.fe.initCacheFromJson = function(json) {
-    keyCache = mitro.keycache.MakeKeyCache();
-    keyCache.loadFromJson(json);
-  };
-}
-
-mitro.fe.getRandomness = function(onSuccess, onError) {
+export function getRandomness(onSuccess, onError) {
   // This runs in a webworker and can't touch window.crypto (because of slow JS in Firefox)
   // worker.js replaces this as a "proxy" to post a message to the background extension page.
   // background_api.js implements the "real" version that gets entropy.
@@ -81,24 +44,13 @@ mitro.fe.getRandomness = function(onSuccess, onError) {
   onSuccess({seed: ''});
 };
 
-mitro.fe.setKeyCache = function(kc) {
+export function setKeyCache(kc) {
   keyCache = kc;
 };
 
-
-var fe = mitro.fe;
-var assert = function(expression) {
-  if (!expression) {
-    throw new Error('Assertion failed');
-  }
-};
-
-var crypto = function() {return mitro.lib.getCrypto();};
-
-
 /**
-Computes the difference between oldList and newList (treating them as sets), 
-putting the result in added and deleted. The lists will be sorted afterwards. 
+Computes the difference between oldList and newList (treating them as sets),
+putting the result in added and deleted. The lists will be sorted afterwards.
 Only works for numeric types.
 
 @param {!Array.<number>} oldList
@@ -107,6 +59,7 @@ Only works for numeric types.
 @param {!Array.<number>} deletedList
 @return {boolean} true iff the lists are different
 */
+// TODO(tom_: use underscore;
 function bidirectionalSetDiff(oldList, newList, addedList, deletedList) {
   return bidrectionalSetDiffWithComparator(oldList, newList, addedList, deletedList,
   function(a, b) {
@@ -115,8 +68,8 @@ function bidirectionalSetDiff(oldList, newList, addedList, deletedList) {
 }
 
 /**
-Computes the difference between oldList and newList (treating them as sets), 
-putting the result in added and deleted. The lists will be sorted afterwards. 
+Computes the difference between oldList and newList (treating them as sets),
+putting the result in added and deleted. The lists will be sorted afterwards.
 
 Supply a comparator if you want non-string compare.
 
@@ -158,7 +111,7 @@ function bidrectionalSetDiffWithComparator(oldList, newList, addedList, deletedL
 }
 
 /** Converts the response from ListMySecretsAndGroups to the format expected by the extension. */
-mitro.fe.convertListSitesToExtension = function(response) {
+export function convertListSitesToExtension(response) {
   var output = [];
   for (var secretId in response.secretToPath) {
     var obj = {};
@@ -192,16 +145,12 @@ mitro.fe.convertListSitesToExtension = function(response) {
   return output;
 };
 
-var FAILOVER_MITRO_HOST = null;
-var FAILOVER_MITRO_PORT = null;
-var DEVICE_ID = null;
-
 /**
  * Wraps an operation and retries it entirely if it fails
  * due to a cancelled transaction that should be retried.
  *
  **/
- var wrapWithTransactionCancelledRetry = function(wrappedFcn) {
+var wrapWithTransactionCancelledRetry = function(wrappedFcn) {
   var MIN_RETRY_DELAY = 1000;
   var MAX_RETRY_DELAY = 3000;
   // some of the write functions modify arguments, so we need to keep a deep
@@ -221,7 +170,7 @@ var DEVICE_ID = null;
 
     // do this double copy to be sure that the default implementation actually works
     wrappedFcnArgs = _copy(originalwrappedFcnArgs);
-    
+
     var newOnError = function(e) {
       try {
         if (e.exceptionType === 'RetryTransactionException') {
@@ -240,7 +189,7 @@ var DEVICE_ID = null;
           oldOnError(e);
         }
       } catch (e2) {
-        oldOnError(mitro.lib.makeLocalException(e2));
+        oldOnError(mitro_lib.makeLocalException(e2));
       }
     };
     wrappedFcnArgs.push(oldOnSuccess);
@@ -301,7 +250,7 @@ var wrapWithFailover = function(wrappedFcn) {
 
 
 /* Creates a new identity. onSuccess gets called with the MitroIdentity. */
-function createIdentity(email, password, analyticsId, host, port, onSuccess, onError) {
+export function createIdentity(email, password, analyticsId, host, port, onSuccess, onError) {
 
   var onSuccessWrapper = function(result) {
     try {
@@ -312,7 +261,7 @@ function createIdentity(email, password, analyticsId, host, port, onSuccess, onE
 
     } catch (e) {
       console.log(e);
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
   var args = {
@@ -325,7 +274,7 @@ function createIdentity(email, password, analyticsId, host, port, onSuccess, onE
     _createPrivateGroup : true,
     deviceId : DEVICE_ID
   };
-  mitro.lib.AddIdentity(args, onSuccessWrapper, onError);
+  mitro_lib.AddIdentity(args, onSuccessWrapper, onError);
 }
 
 /* Accesses an existing identity. onSuccess gets called with the MitroIdentity. */
@@ -338,7 +287,7 @@ function loginWithToken(email, password, token, host, port, tfaCode, onSuccess, 
 }
 
 function loginWithTokenAndLocalKey(email, password, token, host, port, locallyEncryptedKey, tfaCode, onSuccess, onError) {
-  mitro.lib.clearCaches();
+  mitro_lib.clearCaches();
   if (!token) {
     token = {};
   }
@@ -353,8 +302,8 @@ function loginWithTokenAndLocalKey(email, password, token, host, port, locallyEn
     deviceId : DEVICE_ID,
     automatic: !!locallyEncryptedKey
   };
-  
-  (wrapWithFailover(mitro.lib.GetPrivateKey))(args, function(response) {
+
+  (wrapWithFailover(mitro_lib.GetPrivateKey))(args, function(response) {
     try {
       var privateKey = null;
       // in case we have an AES key, and a locally stored key, and no password.
@@ -385,7 +334,7 @@ function loginWithTokenAndLocalKey(email, password, token, host, port, locallyEn
       }, onError);
     } catch (e)  {
       console.log(e);
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   }, onError);
 }
@@ -394,7 +343,7 @@ function addIssue(args, host, port, onSuccess, onError) {
   args.server_host = host;
   args.server_port = port;
 
-  mitro.lib.AddIssue(args, onSuccess, onError);
+  mitro_lib.AddIssue(args, onSuccess, onError);
 }
 
 /** Provides Closure-compiled code access to existing APIs.
@@ -411,7 +360,7 @@ LegacyAPIImplementation.prototype.getPublicKeys = function(
   var args = this.makeArgs(transaction);
   args.addMissingUsers = true;
   identities.sort();
-  mitro.lib.GetPublicKeys(args, identities, function(result) {
+  mitro_lib.GetPublicKeys(args, identities, function(result) {
     if (result.missingUsers.length !== 0) {
       onError(new Error('LegacyAPIImplementation.getPublicKeys: missing users: ' +
         result.missingUsers.length));
@@ -428,7 +377,7 @@ LegacyAPIImplementation.prototype.cryptoLoadFromJson = function(jsonString) {
 LegacyAPIImplementation.prototype.postSigned = function(
     path, request, transaction, onSuccess, onError) {
   var args = this.makeArgs(transaction);
-  mitro.lib.PostToMitro(request, args, path, onSuccess, onError);
+  mitro_lib.PostToMitro(request, args, path, onSuccess, onError);
 };
 
 LegacyAPIImplementation.prototype.getNewRSAKeysAsync = function(count, onSuccess, onError) {
@@ -438,7 +387,7 @@ LegacyAPIImplementation.prototype.getNewRSAKeysAsync = function(count, onSuccess
 LegacyAPIImplementation.prototype.getGroup = function(groupId, transaction, onSuccess, onError) {
   var args = this.makeArgs(transaction);
   args.gid = groupId;
-  mitro.lib.GetGroup(args, onSuccess, onError);
+  mitro_lib.GetGroup(args, onSuccess, onError);
 };
 
 LegacyAPIImplementation.prototype.getIdentity = function() {
@@ -485,7 +434,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   var legacyApi = new LegacyAPIImplementation(_makeArgs);
   obj.mitroclient = new mitro.Client(legacyApi);
   var deviceSpecificKey = null;
-  
+
   obj.getPrivateKeyStringForLocalDisk = function() {
     return deviceSpecificKey ? privateKey.encryptWith(deviceSpecificKey) : null;
   };
@@ -498,21 +447,20 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
     onSuccess(deviceSpecificKey ? privateKey.encryptWith(deviceSpecificKey) : null);
   };
 
-
   obj.holdingTransaction.retrieveDeviceSpecificKey = function(transactionSpecificData, onSuccess, onError) {
     try {
       var args = _makeArgs(transactionSpecificData);
-      wrapWithFailover(mitro.lib.RetrieveDeviceSpecificKey)(args,
+      wrapWithFailover(mitro_lib.RetrieveDeviceSpecificKey)(args,
           function (response) {
             try {
               obj.setDeviceSpecificKeyFromString(response.deviceKeyString);
               onSuccess();
             } catch(e) {
-              onError(mitro.lib.makeLocalException(e));
+              onError(mitro_lib.makeLocalException(e));
             }
           }, onError);
     } catch (e) {
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
@@ -525,7 +473,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
     try {
       onSuccess(privateKey.sign(msg));
     } catch (e) {
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
@@ -575,7 +523,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
           obj.holdingTransaction.mutateSecret(transactionSpecificData, secretId,
             secret.serverData, secret.clientData, secretData, onSuccess, onError);
         } catch(e) {
-          onError(mitro.lib.makeLocalException(e));
+          onError(mitro_lib.makeLocalException(e));
         }
       }, onError);
   };
@@ -600,7 +548,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
       toRun.push([obj.holdingTransaction.editServerSecret, [transactionSpecificData, updatedServerData]]);
     }
 
-    mitro.lib.batch(toRun,
+    mitro_lib.batch(toRun,
       function(rvals)  {
         try {
           var secret = rvals[0];
@@ -626,12 +574,12 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
             groupIdToEncryptedData : groupIdToEncryptedData
           };
           transactionSpecificData.implicitEndTransaction = true;
-          mitro.lib.PostToMitro(data, _makeArgs(transactionSpecificData),
+          mitro_lib.PostToMitro(data, _makeArgs(transactionSpecificData),
           '/mitro-core/api/EditSecretContent', onSuccess, onError);
         } catch (e) {
           console.log(e.message);
           console.log(e.stack);
-          onError(mitro.lib.makeLocalException(e));
+          onError(mitro_lib.makeLocalException(e));
         }
       }, onError);
   };
@@ -639,10 +587,10 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   obj.holdingTransaction.removePendingGroups = function(transactionSpecificData, scope, onSuccess, onError) {
     try {
       var rpc = {scope: scope};
-      mitro.lib.PostToMitro(rpc, _makeArgs(transactionSpecificData), '/mitro-core/api/RemovePendingGroupApprovals', onSuccess, onError);
+      mitro_lib.PostToMitro(rpc, _makeArgs(transactionSpecificData), '/mitro-core/api/RemovePendingGroupApprovals', onSuccess, onError);
     } catch (e) {
       console.log(e.stack);
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
@@ -652,20 +600,20 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
       assert (args.isViewable !== undefined);
       data.isViewable = args.isViewable;
       data.secretId = args.secretId;
-      mitro.lib.PostToMitro(data, _makeArgs(transactionSpecificData),
+      mitro_lib.PostToMitro(data, _makeArgs(transactionSpecificData),
         '/mitro-core/api/EditSecret', onSuccess, onError);
 
     } catch (e) {
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
   obj.holdingTransaction.getPendingGroups = function(transactionSpecificData, scope, onSuccess, onError) {
     try {
-      mitro.lib.PostToMitro({scope:scope}, _makeArgs(transactionSpecificData),
+      mitro_lib.PostToMitro({scope:scope}, _makeArgs(transactionSpecificData),
         '/mitro-core/api/GetPendingGroups', onSuccess, onError);
     } catch (e) {
       console.log('error getting groups:', e.stack);
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
@@ -674,13 +622,13 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
       // PostToMitro has a different parameter order than wrapWithFailover
 
 
-      (wrapWithFailover(mitro.lib.GetOrganizationState))(_makeArgs(transactionSpecificData),
+      (wrapWithFailover(mitro_lib.GetOrganizationState))(_makeArgs(transactionSpecificData),
         {orgId:orgId}, function(resp) {
       var secrets = resp.orgSecretsToPath;
       for (var i in resp.orgSecretsToPath) {
         // if the secret has encrypted data, decrypt it. TODO: Fix server to ALWAYS send this
         if (secrets[i].encryptedClientData) {
-          mitro.lib.decryptSecretWithGroups(secrets[i], resp.groups, privateKey);
+          mitro_lib.decryptSecretWithGroups(secrets[i], resp.groups, privateKey);
           secrets[i].clientData = JSON.parse(secrets[i].clientData);
         }
         secrets[i].hints = {};
@@ -692,7 +640,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
 
     } catch (e) {
       console.log('error getting org state:', e.stack);
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
@@ -753,7 +701,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
             }
 
             // mutate the organization as requested.
-            var mutateRequest = new mitro.MutateOrganizationClientRequest();
+            var mutateRequest = new mitro_legacyapi.MutateOrganizationClientRequest();
             mutateRequest.orgId = approvals.orgId;
             mutateRequest.newMembers = approvals.newOrgMembers;
             if (options.removeUsersFromOrg) {
@@ -764,13 +712,13 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
               toRun.push([obj.holdingTransaction.mutateOrganization, [transactionSpecificData,
                 mutateRequest]]);
             }
-            mitro.lib.series(toRun, onSuccess, onError);
+            mitro_lib.series(toRun, onSuccess, onError);
           } catch (e) {
-            onError(mitro.lib.makeLocalException(e));
+            onError(mitro_lib.makeLocalException(e));
           }
         }, onError);
     } catch (e) {
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
@@ -779,9 +727,9 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
     args.loginToken = token.loginToken,
     args.loginTokenSignature = token.loginTokenSignature;
 		try {
-				mitro.lib.checkTwoFactor(args, function(d) { onSuccess(d.twoFactorUrl); }, onError);
+				mitro_lib.checkTwoFactor(args, function(d) { onSuccess(d.twoFactorUrl); }, onError);
 		}	catch(e) {
-			onError(mitro.lib.makeLocalException(e));
+			onError(mitro_lib.makeLocalException(e));
 		}
 	};
 
@@ -790,12 +738,12 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
     args.loginToken = token.loginToken,
     args.loginTokenSignature = token.loginTokenSignature;
 
-    mitro.lib.GetPrivateKey(args, function(privateKeyResponse) {
+    mitro_lib.GetPrivateKey(args, function(privateKeyResponse) {
       try {
         // refetch the private key.
         var privateKey = crypto().loadFromJson(privateKeyResponse.encryptedPrivateKey, oldPassword);
         var newEncryptedPrivateKey = privateKey.toJsonEncrypted(newPassword);
-				mitro.lib.EditEncryptedPrivateKey(_makeArgs(transactionSpecificData), up, newEncryptedPrivateKey,
+				mitro_lib.EditEncryptedPrivateKey(_makeArgs(transactionSpecificData), up, newEncryptedPrivateKey,
           function(resp) {
             changePwd = false;
             onSuccess(resp);
@@ -803,7 +751,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
 
 
       } catch (e) {
-        onError(mitro.lib.makeLocalException(e));
+        onError(mitro_lib.makeLocalException(e));
       }
     });
   };
@@ -811,13 +759,13 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   obj.holdingTransaction.mutatePrivateKeyPasswordWithoutOldPassword = function(transactionSpecificData, args, onSuccess, onError) {
     try {
       var newEncryptedPrivateKey = privateKey.toJsonEncrypted(args.newPassword);
-      mitro.lib.EditEncryptedPrivateKey(_makeArgs(transactionSpecificData), args.up, newEncryptedPrivateKey,
+      mitro_lib.EditEncryptedPrivateKey(_makeArgs(transactionSpecificData), args.up, newEncryptedPrivateKey,
           function(resp) {
             changePwd = false;
             onSuccess(resp);
       }, onError);
     } catch (e) {
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
@@ -828,7 +776,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
     var args = _makeArgs(transactionSpecificData);
     args.gid = privateNonOrgGroupId;
     args._ = [null, loginUrl, JSON.stringify(clientData), JSON.stringify(secretData)];
-    mitro.lib.AddSecret(args, function (response) {
+    mitro_lib.AddSecret(args, function (response) {
       onSuccess(response.secretId);
     }, onError);
   };
@@ -838,7 +786,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
     data.clientData = JSON.stringify(data.clientData);
     data.criticalData = JSON.stringify(data.criticalData);
     console.log('mitro_fe addSecrets', data.groupIds);
-    mitro.lib.AddSecrets(args, data, onSuccess, onError);
+    mitro_lib.AddSecrets(args, data, onSuccess, onError);
   };
 
   var _makeClientAndSecretData = function(loginUrl, username, password,
@@ -863,17 +811,17 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
     return obj.holdingTransaction.addSecret(transactionSpecificData, loginUrl, clientAndSecretData[0], clientAndSecretData[1], onSuccess, onError);
   };
 
-  obj.holdingTransaction.shareSite = function(transactionSpecificData, secretId, newGroupIdList, 
+  obj.holdingTransaction.shareSite = function(transactionSpecificData, secretId, newGroupIdList,
     newIdentityList, onSuccess, onError) {
-    return obj.holdingTransaction.shareSiteAndOptionallySetOrg(transactionSpecificData, secretId, newGroupIdList, newIdentityList, 
+    return obj.holdingTransaction.shareSiteAndOptionallySetOrg(transactionSpecificData, secretId, newGroupIdList, newIdentityList,
       null, onSuccess, onError);
   };
 
-  obj.holdingTransaction.shareSiteAndOptionallySetOrg = function(transactionSpecificData, secretId, newGroupIdList, 
+  obj.holdingTransaction.shareSiteAndOptionallySetOrg = function(transactionSpecificData, secretId, newGroupIdList,
     newIdentityList, orgGroupId, onSuccess, onError) {
     // 1. list groups and secrets and get existing secret
     assert(secretId);
-    mitro.lib.parallel([
+    mitro_lib.parallel([
       [obj.holdingTransaction.getSiteSecretData, [transactionSpecificData, secretId]]
       ],
 
@@ -943,7 +891,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
             newOrgList = [orgGroupId];
           }
 
-          // TODO: this should actually edit the group with the modified user list instead of 
+          // TODO: this should actually edit the group with the modified user list instead of
           // recreating from scratch.
           var hasDifferentUsers = bidrectionalSetDiffWithComparator(rval[0].users, newIdentityList, [], []);
           if (rval[0].owningOrgId !== orgGroupId || hasDifferentUsers) {
@@ -982,7 +930,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
 
         bidirectionalSetDiff(oldgroups, newGroupIdList, toadd, todel);
 
-        toRun.push([mitro.lib.AddSecrets, [_makeArgs(transactionSpecificData),
+        toRun.push([mitro_lib.AddSecrets, [_makeArgs(transactionSpecificData),
           {groupIds: toadd,
            secretId : secretId}]]);
 
@@ -991,15 +939,15 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
           delArgs.secretId = secretId;
           delArgs._ = [null, secretId];
           delArgs.gid = todel[i];
-          toRun.push([mitro.lib.RemoveSecret, [delArgs]]);
+          toRun.push([mitro_lib.RemoveSecret, [delArgs]]);
         }
 
         newNumberOfGroups += oldgroups.length - todel.length + toadd.length;
-        
+
         // Boo JS has no XOR. should continue to have groups IFF we are not deleting the secret.
         assert ((newNumberOfGroups > 0) === (!deleteSecret));
 
-        mitro.lib.series(toRun, onSuccess, onError);
+        mitro_lib.series(toRun, onSuccess, onError);
 
       }, onError
       );
@@ -1008,7 +956,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   obj.holdingTransaction.getGroup = function(transactionSpecificData, groupId, onSuccess, onError) {
     var args = _makeArgs(transactionSpecificData);
     args.gid = groupId;
-    mitro.lib.GetGroup(args, onSuccess, onError);
+    mitro_lib.GetGroup(args, onSuccess, onError);
   };
 
 
@@ -1034,10 +982,10 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
 
 
       // fetch all the users' public keys.
-      mitro.lib.GetUserAndGroupPublicKeys(args, /* add missing users*/ true, newIdentityList, newGroupIdList, function(keysResponse) {
+      mitro_lib.GetUserAndGroupPublicKeys(args, /* add missing users*/ true, newIdentityList, newGroupIdList, function(keysResponse) {
         args.gid = groupId;
         args.orgId = newGroupIdList !== null ? newGroupIdList[0] : null;
-        mitro.lib.MutateMembership(args, function(group, unencryptedGroupKey, response) {
+        mitro_lib.MutateMembership(args, function(group, unencryptedGroupKey, response) {
 
           var i;
           var regenerateGroupKey = null;
@@ -1127,20 +1075,20 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
 
       // close GetPublicKeys
       }, onError);
-      
+
     } catch(e) {
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
   obj.holdingTransaction.getPublicKeys = function(transactionSpecificData, userIds, onSuccess, onError) {
-    mitro.lib.GetPublicKeys(_makeArgs(transactionSpecificData), userIds, onSuccess, onError);
+    mitro_lib.GetPublicKeys(_makeArgs(transactionSpecificData), userIds, onSuccess, onError);
   };
-  
+
   obj.holdingTransaction._addGroup = function(transactionSpecificData, groupName, autoDelete, onSuccess, onError) {
     return obj.holdingTransaction.addGroupWithScope(transactionSpecificData, groupName, null, autoDelete, onSuccess, onError);
   };
-  
+
   obj.holdingTransaction.addGroupWithScope = function(transactionSpecificData, groupName, groupScope, autoDelete, onSuccess, onError) {
     try {
       console.log('in addgroup with args: ', transactionSpecificData, groupName, groupScope, autoDelete);
@@ -1157,7 +1105,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
       args.scope = groupScope;
       args._ = [null, groupName];
       args.autoDelete = autoDelete;
-      mitro.lib.AddGroup(args, function(response) {
+      mitro_lib.AddGroup(args, function(response) {
 
         // if we are creating the initial empty group, save the id
         if (privateNonOrgGroupId === null) {
@@ -1178,7 +1126,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   obj.holdingTransaction.deleteSecret = function(transactionSpecificData, secretId, onSuccess, onError) {
     try {
       var rpc = {secretId: secretId, groupId:null};
-      mitro.lib.PostToMitro(rpc, _makeArgs(transactionSpecificData), '/mitro-core/api/RemoveSecret', onSuccess, onError);
+      mitro_lib.PostToMitro(rpc, _makeArgs(transactionSpecificData), '/mitro-core/api/RemoveSecret', onSuccess, onError);
     } catch (e) {
       console.log(e.stack);
       onError({local_exception : e});
@@ -1188,16 +1136,16 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   obj.holdingTransaction.removeGroup = function(transactionSpecificData, groupId, onSuccess, onError) {
     try {
       var rpc = {groupId: groupId};
-      mitro.lib.PostToMitro(rpc, _makeArgs(transactionSpecificData), '/mitro-core/api/DeleteGroup', onSuccess, onError);
+      mitro_lib.PostToMitro(rpc, _makeArgs(transactionSpecificData), '/mitro-core/api/DeleteGroup', onSuccess, onError);
     } catch (e) {
       console.log(e.stack);
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
 
   var processListSites = function(response) {
-    var output = mitro.fe.convertListSitesToExtension(response);
+    var output = convertListSitesToExtension(response);
 
     // find our private group if we haven't already done it
     if (privateNonOrgGroupId === null) {
@@ -1218,12 +1166,12 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   obj.holdingTransaction.listSites = function(transactionSpecificData, onSuccess, onError) {
     var args = _makeArgs(transactionSpecificData);
 
-    (wrapWithFailover(mitro.lib.ListGroupsAndSecrets))(args, function(response) {
+    (wrapWithFailover(mitro_lib.ListGroupsAndSecrets))(args, function(response) {
       try {
         onSuccess(processListSites(response));
       } catch (e) {
         console.log('Error:', e);
-        onError(mitro.lib.makeLocalException(e));
+        onError(mitro_lib.makeLocalException(e));
       }
     }, onError);
   };
@@ -1294,7 +1242,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   obj.holdingTransaction.listGroups = function(transactionSpecificData, onSuccess, onError) {
     var args = _makeArgs(transactionSpecificData);
 
-    (wrapWithFailover(mitro.lib.ListGroupsAndSecrets))(args, function(response) {
+    (wrapWithFailover(mitro_lib.ListGroupsAndSecrets))(args, function(response) {
       onSuccess(processListGroups(response));
     }, onError);
   };
@@ -1306,14 +1254,14 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   obj.holdingTransaction.listUsers = function(transactionSpecificData, onSuccess, onError) {
     var args = _makeArgs(transactionSpecificData);
 
-    (wrapWithFailover(mitro.lib.ListGroupsAndSecrets))(args, function(response) {
+    (wrapWithFailover(mitro_lib.ListGroupsAndSecrets))(args, function(response) {
       onSuccess(processListUsers(response));
     }, onError);
   };
 
   obj.holdingTransaction.listUsersGroupsAndSecrets = function(transactionSpecificData, onSuccess, onError) {
     var args = _makeArgs(transactionSpecificData);
-    (wrapWithFailover(mitro.lib.ListGroupsAndSecrets))(args, function(response) {
+    (wrapWithFailover(mitro_lib.ListGroupsAndSecrets))(args, function(response) {
       try {
         var out = {
           users: processListUsers(response),
@@ -1323,7 +1271,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
         };
         onSuccess(out);
       } catch (e) {
-        onError(mitro.lib.makeLocalException(e));
+        onError(mitro_lib.makeLocalException(e));
       }
     }, onError);
   };
@@ -1343,21 +1291,21 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
             obj.holdingTransaction.shareSiteAndOptionallySetOrg(transactionSpecificData, secretId, newGroupIds,
               secret.users, orgGroupId, onSuccess, onError);
           } catch (e) {
-            onError(mitro.lib.makeLocalException(e));
+            onError(mitro_lib.makeLocalException(e));
           }
-          
+
       }, onError);
 
 
     } catch (e) {
-      onError(mitro.lib.makeLocalException(e));
+      onError(mitro_lib.makeLocalException(e));
     }
   };
 
   obj.holdingTransaction.getSiteSecretData = function(transactionSpecificData, secretId, onSuccess, onError) {
     return obj.holdingTransaction.getSiteData(transactionSpecificData, secretId, 'true', onSuccess, onError);
   };
-  
+
   obj.holdingTransaction.getSiteSecretDataForDisplay = function(transactionSpecificData, secretId, onSuccess, onError) {
     return obj.holdingTransaction.getSiteData(transactionSpecificData, secretId, 'display', onSuccess, onError);
   };
@@ -1367,11 +1315,11 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
     // includeCriticalData is now a string "enum", not a boolean
     includeCriticalData = includeCriticalData.toString();
     assert (includeCriticalData in {'true':1, 'false':1, 'display':1});
-    
+
     var args = _makeArgs(transactionSpecificData);
     args._ = [null, secretId];
     args.includeCriticalData = includeCriticalData;
-    (wrapWithFailover(mitro.lib.GetSecret))(args, function(response) {
+    (wrapWithFailover(mitro_lib.GetSecret))(args, function(response) {
       var secret = {};
       secret.secretId = response.secretId;
       secret.clientData = JSON.parse(response.clientData);
@@ -1433,7 +1381,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
       onSuccess(auditResponse);
     };
 
-    mitro.lib.GetAuditLog(args, function (auditResponse) {
+    mitro_lib.GetAuditLog(args, function (auditResponse) {
       if (data.orgId === null) {
         obj.holdingTransaction.listSites(transactionSpecificData, function(secrets) {
           obj.holdingTransaction.listGroups(transactionSpecificData, function (groups) {
@@ -1463,7 +1411,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
     obj.mitroclient.createOrganization(
         request.name, request.owners, request.members,
         function() {
-          mitro.lib.clearCaches();
+          mitro_lib.clearCaches();
           var oldArgs = Array.prototype.slice.call(arguments);
           // This list groups command refreshes the user's org id. Do not delete this line!
           obj.holdingTransaction.listGroups(transactionSpecificData, function() {
@@ -1518,9 +1466,9 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
             oldCriticalData: oldCriticalData
           };
 
-          mitro.lib.PostToMitroAgent(agentRequest, '/ChangePassword', onSuccess, onError);
+          mitro_lib.PostToMitroAgent(agentRequest, '/ChangePassword', onSuccess, onError);
         } catch(e) {
-          onError(mitro.lib.makeLocalException(e));
+          onError(mitro_lib.makeLocalException(e));
         }
       }, onError);
   };
@@ -1560,7 +1508,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
       assert (isFunction(oldOnSuccess));
 
       var mitroArgs = _makeArgs();
-      
+
       assert (mitroArgs.transactionSpecificData === undefined);
 
       var transactionSpecificData = {id:null, isWriteOperation: isWriteOperation,
@@ -1569,8 +1517,8 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
       var onSuccess = function(successResponse) {
         var afterEndTxn = function() {
           if (isWriteOperation) {
-            mitro.lib.clearCaches();
-            mitro.lib.postEndTransaction(transactionSpecificData);
+            mitro_lib.clearCaches();
+            mitro_lib.postEndTransaction(transactionSpecificData);
           }
           oldOnSuccess(successResponse);
         };
@@ -1579,7 +1527,7 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
         if (transactionSpecificData.id) {
           if (!transactionSpecificData.implicitEndTransaction) {
             console.log('trying to close transaction with data:', transactionSpecificData);
-            mitro.lib.PostToMitro({}, _makeArgs(transactionSpecificData), '/mitro-core/api/EndTransaction', afterEndTxn, onError);
+            mitro_lib.PostToMitro({}, _makeArgs(transactionSpecificData), '/mitro-core/api/EndTransaction', afterEndTxn, onError);
           } else {
             console.log('transaction already closed: ', transactionSpecificData);
             afterEndTxn();
@@ -1589,15 +1537,15 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
       var onError = function(e) {
         console.log('ERROR IN TRANSACTION CODE:', e);
         // TODO: rollback transaction
-        mitro.lib.clearCaches();
-        mitro.lib.postEndTransaction(transactionSpecificData);
+        mitro_lib.clearCaches();
+        mitro_lib.postEndTransaction(transactionSpecificData);
         // attempt to send log to server.
         var a = _makeArgs();
         a.type = 'exception';
         a.description = JSON.stringify(e);
         a.email = email;
         a.url = "";
-        //mitro.lib.AddIssue(a, function() {}, function() {});
+        //mitro_lib.AddIssue(a, function() {}, function() {});
         oldOnError(e);
       };
       wrappedFcnArgs.unshift(transactionSpecificData);
@@ -1614,22 +1562,22 @@ function _make(email, verified, unsignedToken, privateKey, changePwd, host, port
   return obj;
 }
 
-fe.setFailover = function(host, port) {
+export function setFailover(host, port) {
   FAILOVER_MITRO_HOST = host;
   FAILOVER_MITRO_PORT = port;
-};
-fe.setDeviceId = function(deviceId) {
-  DEVICE_ID = deviceId;
-};
+}
 
-fe.getDeviceId = function() {
+export function setDeviceId(deviceId) {
+  DEVICE_ID = deviceId;
+}
+
+export function getDeviceId() {
   return DEVICE_ID;
 };
 
-fe.getDeviceIdAsync = function(onSuccess) {
+export function getDeviceIdAsync(onSuccess) {
   onSuccess(DEVICE_ID);
 };
-
 
 /**
  * This function wraps login and create calls and returns only clone-able objects.
@@ -1650,9 +1598,9 @@ var wrapLogin = function(wrappedFcn) {
       var token = JSON.stringify({'email' : identity.uid,
       'nonce' : Math.random().toString(36).substring(7)});
       var signature = identity.signMessage(token);
-      var url_path = "/mitro-core/TwoFactorAuth/TFAPreferences?user=" + 
-                encodeURIComponent(identity.getUid()) + "&token=" + 
-                encodeURIComponent(token) + "&signature=" + 
+      var url_path = "/mitro-core/TwoFactorAuth/TFAPreferences?user=" +
+                encodeURIComponent(identity.getUid()) + "&token=" +
+                encodeURIComponent(token) + "&signature=" +
                 encodeURIComponent(signature);
 
 
@@ -1667,13 +1615,13 @@ var wrapLogin = function(wrappedFcn) {
       wrappedFcnArgs.push(oldOnError);
       wrappedFcn.apply(undefined, wrappedFcnArgs);
     } catch (e) {
-      oldOnError(mitro.lib.makeLocalException(e));
+      oldOnError(mitro_lib.makeLocalException(e));
     }
   };
 
 };
 
-fe.workerInvokeOnIdentity = function() {
+export function workerInvokeOnIdentity() {
   var args = Array.prototype.slice.call(arguments);
   var onError = args[args.length-1];
   try {
@@ -1683,7 +1631,7 @@ fe.workerInvokeOnIdentity = function() {
     // Unnecessary to initialize to undefined
     var appliedThisPointer;
     identities[identityId.identityId][operation].apply(appliedThisPointer, args);
-    fe.getRandomness(function(data) {
+    getRandomness(function(data) {
       forge.random.collect(data.seed);
       console.log('added randomness...');
     }, function() {
@@ -1691,26 +1639,21 @@ fe.workerInvokeOnIdentity = function() {
     });
 
   } catch (e) {
-    onError(mitro.lib.makeLocalException(e));
+    onError(mitro_lib.makeLocalException(e));
   }
 };
 
-fe.workerLogout = function(identityObject) {
+export function workerLogout(identityObject) {
   delete identities[identityObject.identityId];
 };
 
-fe.createIdentity = createIdentity;
-fe.workerCreateIdentity = wrapLogin(createIdentity);
-fe.workerLogin = wrapLogin(login);
-fe.workerLoginWithToken = wrapLogin(loginWithToken);
-fe.workerLoginWithTokenAndLocalKey = wrapLogin(loginWithTokenAndLocalKey);
 
-fe.login = login;
+const workerCreateIdentity = wrapLogin(createIdentity);
+const workerLogin = wrapLogin(login);
+const workerLoginWithToken = wrapLogin(loginWithToken);
+const workerLoginWithTokenAndLocalKey = wrapLogin(loginWithTokenAndLocalKey);
 
-fe.loginWithToken = loginWithToken;
-fe.loginWithTokenAndLocalKey = loginWithTokenAndLocalKey;
-fe.addIssue = addIssue;
-fe.keyCache = keyCache;
-fe.clearCaches = mitro.lib.clearCaches;
-fe.bidirectionalSetDiff = bidirectionalSetDiff;
-})();
+export { workerCreateIdentity, workerLogin, workerLoginWithToken,
+         workerLoginWithTokenAndLocalKey, login, loginWithToken,
+         loginWithTokenAndLocalKey, addIssue, keyCache, clearCaches,
+         bidirectionalSetDiff }

@@ -24,20 +24,7 @@
  * *****************************************************************************
  */
 
-/** @suppress{duplicate} */
-var mitro = mitro || {};
-(function() {
-mitro.cache = {};
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = mitro.cache;
-}
-var cache = mitro.cache;
-
-var assert = function(expression) {
-  if (!expression) {
-    throw new Error('Assertion failed');
-  }
-};
+import { assert } from "./assert";
 
 /*
 MIT LICENSE
@@ -68,7 +55,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 // ****************************************************************************
 // LRUCachePriority ENUM
 // An easier way to refer to the priority of a cache item
-var LRUCachePriority = {
+export const LRUCachePriority = {
     Low: 1,
     Normal: 2,
     High: 4
@@ -83,7 +70,7 @@ var LRUCachePriority = {
 /** @constructor
 @param {number} maxSize
 */
-function LRUCache(maxSize) {
+export function LRUCache(maxSize) {
     this.items = {};
     this.count = 0;
     if (maxSize === null)
@@ -287,7 +274,7 @@ LRUCache.prototype.toHtmlString = function() {
 };
 
 var KEY_SEPARATOR = '\u009E'; // some random UTF-8 control character
-var makeKey = function() {
+function makeKey() {
     var args = Array.prototype.slice.call(arguments);
     var key = '';
     for (var i = 0; i < args.length; ++i) {
@@ -302,11 +289,8 @@ var makeKey = function() {
 
 // Decent hash function
 // TODO: think about security implications of using this in keys.
-var hash = function(s){
+function hash(s: string){
   return s.split("").reduce(function(a,b){a=((a<<5)-a)+b.charCodeAt(0);return a&a;},0);
 };
 
-cache.LRUCache = LRUCache;
-cache.makeKey = makeKey;
-cache.hash = hash;
-})();
+export { makeKey, hash };

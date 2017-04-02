@@ -25,7 +25,7 @@
  */
 
 /** @suppress{duplicate} */
-var forge = forge || require('node-forge');
+// var forge = forge || require('node-forge');  TODO FIX
 /** @suppress{duplicate} */
 var mitro = mitro || {};
 
@@ -34,24 +34,11 @@ var mitro = mitro || {};
 "use strict";
 mitro.keycache = {};
 
-var _Worker = null;
+  var _Worker = null;
+
 // define window.mitro.keycache for the browser
 if(typeof(window) !== 'undefined') {
   _Worker = (typeof(unsafeWindow) !== 'undefined') ? unsafeWindow.Worker : Worker;
-}
-// define node.js module
-else if(typeof(module) !== 'undefined' && module.exports) {
-  mitro.crappycrypto = require('./crappycrypto.js');
-  mitro.crypto = require('./crypto.js');
-  module.exports = mitro.keycache;
-  try {
-    _Worker = require('webworker-threads').Worker;
-  } catch (e) {
-    // failed to load webworkers; ignore if DISABLE_WEBWORKERS env var is set
-    if (!process.env.DISABLE_WEBWORKERS) {
-      throw e;
-    }
-  }
 }
 
 // ideally keep the cache fill with this many keys

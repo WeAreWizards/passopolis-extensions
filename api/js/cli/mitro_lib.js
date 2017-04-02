@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -24,105 +25,78 @@
  * *****************************************************************************
  */
 
-(function() {
-// define mitro
-if(typeof(window) !== 'undefined') {
-  if (typeof(mitro) === 'undefined') {mitro = window.mitro = window.mitro || {};}
-  mitro.lib = {};
-}
-// define node.js module
-else if(typeof(module) !== 'undefined' && module.exports) {
-  getExtensionId = function() { return 'node_extension_id';};
-  mitro = {
-    crypto : require('./crypto.js'),
-    crappycrypto : require('./crappycrypto.js'),
-    keycache: require('./keycache'),
-    rpc : require('./rpc.js'),
-    cache: require('./lru_cache.js'),
-    log: require('./logging.js')
-  };
-  module.exports = mitro.lib = {};
-}
+import { assert } from "./assert";
+import * as lru_cache from "./lru_cache";
+import { keycache } from "./keycache";
+import * as crypto from "./crypto";
+import * as rpc from "./rpc";
+import * as config from "../../../login/chrome/config/config";
+import { getExtensionId } from "../../../login/common/worker";
 
-var globalDecryptionCache = new mitro.cache.LRUCache(1024);
-var txnSpecificCaches = {};
+const globalDecryptionCache = new lru_cache.LRUCache(1024);
+const txnSpecificCaches = {};
 
-var makeLocalException = function (e) {
+function makeLocalException (e: Error) {
   try {
     console.log('local exception:', e, e.stack);
   } catch (ee) {}
-  var output = {status: -1,
-          userVisibleError: 'Unknown local error',
-          exceptionType: 'JavascriptException',
-          local_exception: e};
+  var output = {
+    status: -1,
+    userVisibleError: 'Unknown local error',
+    exceptionType: 'JavascriptException',
+    local_exception: e
+  };
   if (e.userVisibleError) {
-    output.userVisibleError = e.userVisibleError;
+    output.userVisibleError = "" + (e.userVisibleError : any);
   }
   return output;
 };
 
 // cache things for ~ 1 minute.
-var CACHE_TIME_MS = 1000*60*1;
-
-var _getCache = function(args) {
+const CACHE_TIME_MS = 1000*60*1;
+const GENERAL_TRANSACTION = 'general-transaction'
+function _getCache(args) {
   if (args._transactionSpecificData && args._transactionSpecificData.isWriteOperation && args._transactionSpecificData.id) {
     if (!(args._transactionSpecificData.id in txnSpecificCaches)) {
-      txnSpecificCaches[args._transactionSpecificData.id] = new mitro.cache.LRUCache();
+      txnSpecificCaches[args._transactionSpecificData.id] = new lru_cache.LRUCache();
     }
     return txnSpecificCaches[args._transactionSpecificData.id];
   } else {
-    if (txnSpecificCaches[null] === undefined) {
-      txnSpecificCaches[null] = new mitro.cache.LRUCache(1024);
+    if (txnSpecificCaches[GENERAL_TRANSACTION] === undefined) {
+      txnSpecificCaches[GENERAL_TRANSACTION] = new lru_cache.LRUCache(1024);
     }
-    return txnSpecificCaches[null];
+    return txnSpecificCaches[GENERAL_TRANSACTION];
   }
 };
 
-var postEndTransaction = function(transactionSpecificData) {
+type TransactionSpecificData = any // todo
+
+function postEndTransaction(transactionSpecificData: TransactionSpecificData) {
   delete txnSpecificCaches[transactionSpecificData.id];
 };
 
-var clearCacheAndCall = function(f) {
+var clearCacheAndCall = function(f: any) {
   return function() {
     console.log('mitro_lib: clearing global cache');
-    delete txnSpecificCaches[null];
+    delete txnSpecificCaches[GENERAL_TRANSACTION];
     f.apply(null, Array.prototype.slice.call(arguments));
   };
 };
 
-var crypto = mitro.crypto;
-var initForTest = function() {
-  if (!mitro.crappycrypto) {
-    throw new Error('crappycrypto does not exist?');
-  }
-  crypto = mitro.crappycrypto;
-  mitro.keycache.useCrappyCrypto();
-};
-
-var getCrypto = function() {
-  return crypto;
-};
-
-var lib = mitro.lib;
-var assert = function(expression) {
-  if (!expression) {
-    throw new Error('Assertion failed');
-  }
-};
 
 // General code for all modules
-var PostToMitro = function(outdict, args, path, onSuccess, onError) {
-  
+function PostToMitro(outdict: Object, args: Object, path: string, onSuccess: any, onError: any) {
+
   // include the device id in the signed portion of the request
   outdict.deviceId = args.deviceId;
 
-  var message = {
+  var message: any = {
     'identity': args.uid,
     'request': JSON.stringify(outdict)
   };
 
   if (args._transactionSpecificData) {
-    message.operationName =  args._transactionSpecificData.operationName;
+    message.operationName = args._transactionSpecificData.operationName;
     message.transactionId = args._transactionSpecificData.id;
     message.implicitEndTransaction = args._transactionSpecificData.implicitEndTransaction;
     if (args._transactionSpecificData.implicitBeginTransaction) {
@@ -136,7 +110,7 @@ var PostToMitro = function(outdict, args, path, onSuccess, onError) {
     message.signature = args._privateKey.sign(message.request);
   }
 
-  return mitro.rpc._PostToMitro(message, args, path, function(resp) {
+  return rpc._PostToMitro(message, args, path, function(resp) {
     if (args._transactionSpecificData && !args._transactionSpecificData.id) {
       args._transactionSpecificData.id = resp.transactionId;
     }
@@ -144,15 +118,16 @@ var PostToMitro = function(outdict, args, path, onSuccess, onError) {
     }, onError);
 };
 
-var PostToMitroAgent = function(request, path, onSuccess, onError) {
+// TODO(tom): we can probably do better for types of onSuccess and onError
+function PostToMitroAgent(request: Object, path: string, onSuccess: any, onError: any) {
   var args = {
-    server_host: MITRO_AGENT_HOST,
-    server_port: MITRO_AGENT_PORT
+    server_host: config.MITRO_AGENT_HOST,
+    server_port: config.MITRO_AGENT_PORT,
   };
-  return mitro.rpc._PostToMitro(request, args, path, onSuccess, onError);
+  return rpc._PostToMitro(request, args, path, onSuccess, onError);
 };
 
-var setPostToMitroForTest = function(replacementFunction) {
+function setPostToMitroForTest(replacementFunction: any) {
   PostToMitro = replacementFunction;
 };
 
@@ -161,34 +136,38 @@ var setPostToMitroForTest = function(replacementFunction) {
 // takes > 1 year to crack, so that seems like a reasonable rule?
 // TODO: Enforce mixed-case, numeric, or special char rules?
 // http://blog.agilebits.com/2013/04/16/1password-hashcat-strong-master-passwords/
-var MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_LENGTH = 8;
 
-var EditEncryptedPrivateKey = function(args, up, newEncryptedPrivateKey, onSuccess, onError) {
+type EncryptedPrivateKey = any // TODO
+
+function EditEncryptedPrivateKey(args: any, up: any, newEncryptedPrivateKey: EncryptedPrivateKey, onSuccess: any, onError: any) {
   try {
-	var request = {
-		userId: args.uid, encryptedPrivateKey: newEncryptedPrivateKey, tfaToken: up.token, tfaSignature: up.token_signature
-	};
-	assert (newEncryptedPrivateKey);
-	PostToMitro(request,
-			args, '/mitro-core/api/EditEncryptedPrivateKey', onSuccess, onError);
+    var request = {
+      userId: args.uid, encryptedPrivateKey: newEncryptedPrivateKey, tfaToken: up.token, tfaSignature: up.token_signature
+    };
+    assert (newEncryptedPrivateKey);
+    PostToMitro(request,
+		args, '/mitro-core/api/EditEncryptedPrivateKey', onSuccess, onError);
   } catch(e) {
     onError(makeLocalException(e));
   }
-};
+}
 
+type OnSuccess = any
+type OnError = any
 
-var checkTwoFactor = function (args, onSuccess, onError) {
-	try {
-		var request = {
-    userId: args.uid,
-    extensionId: getExtensionId()
-		};
+function checkTwoFactor(args: any, onSuccess: OnSuccess, onError: OnError) {
+  try {
+    var request = {
+      userId: args.uid,
+      extensionId: getExtensionId()
+    };
     PostToMitro(request, args, '/mitro-core/api/ChangePwdTwoFactorRequired', onSuccess, onError);
-	}
-	catch (e) {
-		onError(makeLocalException(e));
-	}
-};
+  }
+  catch (e) {
+    onError(makeLocalException(e));
+  }
+}
 
 
 /**
@@ -200,7 +179,7 @@ var checkTwoFactor = function (args, onSuccess, onError) {
  *     callback to call; response contains privateKey and transaction id
  *
  */
-var AddIdentity = clearCacheAndCall(function(args, onSuccess, onError) {
+const AddIdentity = clearCacheAndCall(function(args, onSuccess, onError) {
   try {
     console.log('>>Add Identity');
     // uid must be email, password must be long enough
@@ -216,7 +195,7 @@ var AddIdentity = clearCacheAndCall(function(args, onSuccess, onError) {
       var privateKey = keys[0];
       var groupKey = keys[1];
       // generate a key; encrypt it
-      var request = {
+      var request: any = {
         userId: args.uid,
         publicKey: privateKey.exportPublicKey().toJson(),
         encryptedPrivateKey: privateKey.toJsonEncrypted(args.password),
@@ -247,7 +226,7 @@ var AddIdentity = clearCacheAndCall(function(args, onSuccess, onError) {
 /**
  * AddGroup -- add a new group to the DB, and add me to it.
  * Args:
- *   args: 
+ *   args:
  *     { uid : user id of the actor (string)
  *       _privateKey: an initialized Private Key object from crypto.
  *      '_' : [ name (string)]},
@@ -255,7 +234,7 @@ var AddIdentity = clearCacheAndCall(function(args, onSuccess, onError) {
  *   onSuccess: function(response)
  *     callback to call; response = {groupId:int};
  *
- */ 
+ */
 var AddGroup = clearCacheAndCall(function(args, onSuccess, onError) {
   try {
     args._keyCache.getNewRSAKeysAsync(1, function(keys) {
@@ -294,11 +273,11 @@ var AddGroup = clearCacheAndCall(function(args, onSuccess, onError) {
 
 /**
  * TODO: this is broken and should use a different field for the actor and the public key
- * 
+ *
  * GetPublicKey -- get a specific user's public key
  * Args:
- *   args: 
- *   
+ *   args:
+ *
  *     { uid : user id of the calling user.
  *       target_uid: user id whose public key you want (string)
  *       _privateKey: an initialized Private Key object from crypto.
@@ -306,39 +285,41 @@ var AddGroup = clearCacheAndCall(function(args, onSuccess, onError) {
  *   onSuccess: function(response)
  *     callback to call; response = {myUserId: int, publicKey: string}
  *
- */ 
-var GetPublicKey = function(args, onSuccess, onError) {
+ */
+function GetPublicKey(args: Object, onSuccess: OnSuccess, onError: OnError) {
   var uids = [args.target_uid];
   GetPublicKeys(args, uids,
-    function(response) {
-      // TODO: this is kind of ugly. We should fix this code eventually
-      response.publicKey = response.userIdToPublicKey[uids[0]];
-      response.myUserId = uids[0];
-      onSuccess(response);
-    }, onError);
-};
+                function(response) {
+                  // TODO: this is kind of ugly. We should fix this code eventually
+                  response.publicKey = response.userIdToPublicKey[uids[0]];
+                  response.myUserId = uids[0];
+                  onSuccess(response);
+                }, onError);
+}
 
-var GetPublicKeys = function(args, uids, onSuccess, onError) {
+type Identities = any // TODO
+
+function GetPublicKeys(args: Object, uids: Identities, onSuccess: OnSuccess, onError: OnError) {
   return GetUserAndGroupPublicKeys(args, args.addMissingUsers, uids, null, onSuccess, onError);
 };
 
-var GetUserAndGroupPublicKeys = function(args, addMissingUsers, uids, gids, onSuccess, onError) {
+function GetUserAndGroupPublicKeys(args: Object, addMissingUsers: bool, uids: Identities, gids: ?Array<number>, onSuccess: OnSuccess, onError: OnError) {
   try {
     console.log('>>Get public key');
     var request = {userIds : uids, addMissingUsers: addMissingUsers, groupIds: gids};
-    PostToMitro(request, args, '/mitro-core/api/GetPublicKeyForIdentity', 
-      function(r) {
-        //TODO: pass this back so we can prompt users
-        assert (!r.missingUsers || r.missingUsers.length === 0);
-        onSuccess(r);
-      }, onError);
-   } catch (e) {
+    PostToMitro(request, args, '/mitro-core/api/GetPublicKeyForIdentity',
+                function(r) {
+                  //TODO: pass this back so we can prompt users
+                  assert (!r.missingUsers || r.missingUsers.length === 0);
+                  onSuccess(r);
+                }, onError);
+  } catch (e) {
     console.log(e.stack);
     onError(makeLocalException(e));
   }
-};
+}
 
-var RetrieveDeviceSpecificKey = function(args, onSuccess, onError) {
+function RetrieveDeviceSpecificKey(args: Object, onSuccess: OnSuccess, onError: OnError) {
   try {
     console.log('>>Retrieve Device key');
     assert(args.uid);
@@ -357,7 +338,7 @@ var RetrieveDeviceSpecificKey = function(args, onSuccess, onError) {
  * args {uid: user id}
  * calls onSuccess with object from  RPC.java
  */
-var GetPrivateKey = function(args, onSuccess, onError) {
+function GetPrivateKey(args: Object, onSuccess: OnSuccess, onError: OnError) {
   try {
     console.log('>>Get private key');
     assert(args.uid);
@@ -385,7 +366,9 @@ var decryptSecretWithKeyString = function(secret, keyString, privateKeyObject) {
   return secret;
 };
 
-var decryptSecretWithGroups = function(secret, groups, previousUnencryptedKey) {
+type Secret = Object // TODO(tom)
+
+function decryptSecretWithGroups(secret: Secret, groups: Array<number>, previousUnencryptedKey) {
   assert(secret);
   var path = secret.groupIdPath;
   for (var pathId in path) {
@@ -420,9 +403,9 @@ var _decryptSecret = function(secretId, listGroupAndSecretsResp, userPrivateKey)
  * args {uid: userId, '_':['secret_id'], _privateKey: key object}
  * calls onSuccess with a secret object, with .criticalData and .clientData set
  */
-var GetSecret = function(args, onSuccess, onError) {
+function GetSecret(args: Object, onSuccess: OnSuccess, onError: OnError) {
   try {
-    // This is a bit complicated. First we have to list groups and secrets, then decrypt the 
+    // This is a bit complicated. First we have to list groups and secrets, then decrypt the
     // chain of group keys, then decrypt the secret, by re-requesting it, requesting the critical data.
     // TODO: cache this.
     assert(onSuccess);
@@ -432,7 +415,7 @@ var GetSecret = function(args, onSuccess, onError) {
     }
     var cacheKey = null;
     if (!includeCriticalData) {
-      cacheKey = mitro.cache.makeKey('GetSecret', args.uid, args._[1]);
+      cacheKey = lru_cache.makeKey('GetSecret', args.uid, args._[1]);
       var resp = _getCache(args).getItem(cacheKey);
       if (resp) {
           console.log('mitro_lib GetSecret: Found response in cache');
@@ -482,19 +465,19 @@ var GetSecret = function(args, onSuccess, onError) {
 };
 
 /**
- * ListGroupsAndSecrets 
- * 
+ * ListGroupsAndSecrets
+ *
  * args {uid: userId, _privateKey: key object}
- * 
+ *
  * calls onSuccess with object in RPC.java, but with unencrypted .clientData
  * added to every secret.
  */
-var ListGroupsAndSecrets = function(args, onSuccess, onError) {
+function ListGroupsAndSecrets(args: Object, onSuccess: OnSuccess, onError: OnError) {
   try {
-    var resp = _getCache(args).getItem(mitro.cache.makeKey('ListGroupsAndSecrets', args.uid));
+    var resp = _getCache(args).getItem(lru_cache.makeKey('ListGroupsAndSecrets', args.uid));
     if (resp) {
         console.log('mitro_lib ListGroupsAndSecrets: Found response in cache');
-        (onSuccess || mitro.rpc.DefaultResponseHandler)(JSON.parse(resp));
+        (onSuccess || rpc.DefaultResponseHandler)(JSON.parse(resp));
         return; // IMPORTANT DO NOT REMOVE
     }
     console.log('>>Get List Groups and Secrets');
@@ -502,15 +485,15 @@ var ListGroupsAndSecrets = function(args, onSuccess, onError) {
     var request = {myUserId : args.uid};
     PostToMitro(request, args, '/mitro-core/api/ListMySecretsAndGroupKeys', function(resp) {
       var secretIds = Object.keys(resp.secretToPath);
-      for (var i in secretIds) {
-        _decryptSecret(secretIds[i], resp, args._privateKey);
+      for (let x of secretIds) {
+        _decryptSecret(x, resp, args._privateKey);
       }
       // Cache for one minute
-      _getCache(args).setItem(mitro.cache.makeKey('ListGroupsAndSecrets', args.uid),
+      _getCache(args).setItem(lru_cache.makeKey('ListGroupsAndSecrets', args.uid),
           // TODO: this should actually be a deep copy but I have no idea how to do that in JS.
           JSON.stringify(resp),
           {expirationAbsolute: new Date(new Date().getTime() + CACHE_TIME_MS)});
-      (onSuccess || mitro.rpc.DefaultResponseHandler)(resp);
+      (onSuccess || rpc.DefaultResponseHandler)(resp);
     },
     onError
     );
@@ -522,14 +505,14 @@ var ListGroupsAndSecrets = function(args, onSuccess, onError) {
 
 };
 
-var GetOrganizationState = function(args, postArgs, onSuccess, onError) {
+function GetOrganizationState(args: Object, postArgs: Object, onSuccess: OnSuccess, onError: OnError) {
   var path = '/mitro-core/api/GetOrganizationState';
-  var key = mitro.cache.makeKey(path, postArgs.orgId);
+  var key = lru_cache.makeKey(path, postArgs.orgId);
   var resp = _getCache(args).getItem(key);
   if (resp) {
     onSuccess(JSON.parse(resp));
   } else {
-    mitro.lib.PostToMitro(postArgs, args, path, function(resp) {
+    PostToMitro(postArgs, args, path, function(resp) {
       _getCache(args).setItem(key, JSON.stringify(resp),
       {expirationAbsolute: new Date(new Date().getTime() + CACHE_TIME_MS)});
       onSuccess(resp);
@@ -539,7 +522,7 @@ var GetOrganizationState = function(args, postArgs, onSuccess, onError) {
 
 // mutationFunction MUST RETURN TRUE if secrets are to be re-encrypted with
 // a new key
-var MutateMembership = clearCacheAndCall(function(args, mutationFunction, onSuccess, onError) {
+var MutateMembership = clearCacheAndCall(function(args, mutationFunction, onSuccess: OnSuccess, onError: OnError) {
   try {
     args.orgId = parseInt(args.orgId, 10);
     assert(onSuccess);
@@ -559,8 +542,7 @@ var MutateMembership = clearCacheAndCall(function(args, mutationFunction, onSucc
           unencryptedOldGroupKey = crypto.loadFromJson(args._privateKey.decrypt(acl.groupKeyEncryptedForMe));
         }
       }
-      //
-      var doRest = function(unencryptedOldGroupKey) {
+      function doRest(unencryptedOldGroupKey: ?Object) {
         try {
           var reEncrypt = mutationFunction(group, unencryptedOldGroupKey);
           if (!reEncrypt) {
@@ -579,9 +561,11 @@ var MutateMembership = clearCacheAndCall(function(args, mutationFunction, onSucc
                 // re-encrypt all the secret data with the new key
                 for (i in group.secrets) {
                   group.secrets[i].encryptedClientData = newGroupKey.encrypt(
+                    // $FlowFixMe
                       unencryptedOldGroupKey.decrypt(group.secrets[i].encryptedClientData));
                   group.secrets[i].encryptedCriticalData = newGroupKey.encrypt(
-                      unencryptedOldGroupKey.decrypt(group.secrets[i].encryptedCriticalData));
+                    // $FlowFixMe
+                    unencryptedOldGroupKey.decrypt(group.secrets[i].encryptedCriticalData));
                 }
                 group.publicKey = newGroupKey.exportPublicKey().toJson();
                 PostToMitro(group, args, '/mitro-core/api/EditGroup', clearCacheAndCall(onSuccess), onError);
@@ -597,7 +581,7 @@ var MutateMembership = clearCacheAndCall(function(args, mutationFunction, onSucc
 
       if (unencryptedOldGroupKey === null && args.orgId) {
         // see if we can access this data through the top level org group (for admins)
-        
+
         var groupAcl = null;
         for (i in group.acls) {
           groupAcl = group.acls[i];
@@ -615,8 +599,13 @@ var MutateMembership = clearCacheAndCall(function(args, mutationFunction, onSucc
             var orgAcl = org.acls[i];
             // make sure we're not already in the ACL (no duplicates!)
             if (orgAcl.memberIdentity === args.uid) {
+
+              if (groupAcl === null) {
+                throw (`groupacl for orgId ${args.orgId} not found`);
+              }
+
               // it's me!
-              var unencryptedOrgGroupKey = crypto.loadFromJson(args._privateKey.decrypt(orgAcl.groupKeyEncryptedForMe));
+              const unencryptedOrgGroupKey = crypto.loadFromJson(args._privateKey.decrypt(orgAcl.groupKeyEncryptedForMe));
               unencryptedOldGroupKey = crypto.loadFromJson(unencryptedOrgGroupKey.decrypt(groupAcl.groupKeyEncryptedForMe));
             }
           }
@@ -634,13 +623,13 @@ var MutateMembership = clearCacheAndCall(function(args, mutationFunction, onSucc
 
 /**
  * AddMember
- * 
- * args {uid: userId, gid: group_id, target_uid: target user, 
+ *
+ * args {uid: userId, gid: group_id, target_uid: target user,
  *       _privateKey: key object for me,
- *       _targetPublicKey: key object for the target, 
+ *       _targetPublicKey: key object for the target,
  * calls onSuccess with : see RPC.java
  */
-var AddMember = clearCacheAndCall(function(args, onSuccess, onError) {
+var AddMember = clearCacheAndCall(function(args, onSuccess: OnSuccess, onError: OnError) {
   MutateMembership(args, function(group, unencryptedGroupKey) {
     assert(unencryptedGroupKey);
     group.acls.push(
@@ -657,13 +646,13 @@ var AddMember = clearCacheAndCall(function(args, onSuccess, onError) {
 
 /**
  * RemoveMember
- * 
- * args {uid: userId, gid: group_id, target_uid: target user, 
+ *
+ * args {uid: userId, gid: group_id, target_uid: target user,
  *       _privateKey: key object for me,
- *       _targetPublicKey: key object for the target, 
+ *       _targetPublicKey: key object for the target,
  * calls onSuccess with: see RPC.java
  */
-var RemoveMember = clearCacheAndCall(function(args, onSuccess, onError) {
+var RemoveMember = clearCacheAndCall(function(args, onSuccess: OnSuccess, onError: OnError) {
   args.includeCriticalData = true;
   MutateMembership(args, function(group, unencryptedOldGroupKey) {
     var newacls = [];
@@ -682,23 +671,23 @@ var RemoveMember = clearCacheAndCall(function(args, onSuccess, onError) {
 
 /**
  * GetGroup
- * 
+ *
  * args {uid: userId, gid: group_id
  *       _privateKey: key object for me,
  * calls onSuccess with: see RPC.java
  */
-var GetGroup = function(args, onSuccess, onError) {
+function GetGroup(args: Object, onSuccess: OnSuccess, onError: OnError) {
   try {
     assert(args.gid);
     var request = {groupId : args.gid, userId: args.uid, includeCriticalData: args.includeCriticalData};
-    var resp = _getCache(args).getItem(mitro.cache.makeKey('GetGroup', args.uid, args.gid, args.includeCriticalData));
+    var resp = _getCache(args).getItem(lru_cache.makeKey('GetGroup', args.uid, args.gid, args.includeCriticalData));
     if (resp) {
         console.log('mitro_lib GetGroup: Found response in cache');
         onSuccess(JSON.parse(resp));
         return; // IMPORTANT DO NOT REMOVE
     }
     PostToMitro(request, args, '/mitro-core/api/GetGroup', function(resp) {
-      _getCache(args).setItem(mitro.cache.makeKey('GetGroup', args.uid, args.gid, args.includeCriticalData),
+      _getCache(args).setItem(lru_cache.makeKey('GetGroup', args.uid, args.gid, args.includeCriticalData),
         JSON.stringify(resp),
         {expirationAbsolute: new Date(new Date().getTime() + CACHE_TIME_MS)});
       onSuccess(resp);
@@ -710,7 +699,7 @@ var GetGroup = function(args, onSuccess, onError) {
 };
 
 
-var AddSecrets = clearCacheAndCall(function(args, data, onSuccess, onError) {
+var AddSecrets = clearCacheAndCall(function(args, data, onSuccess: OnSuccess, onError: OnError) {
   try {
     if (data.groupIds.length === 0) {
       onSuccess();
@@ -722,13 +711,13 @@ var AddSecrets = clearCacheAndCall(function(args, data, onSuccess, onError) {
         try {
 
           //Used to prevent creating a function within a loop
-          var messageFunction = function(response, onSuccess, onError){
+          var messageFunction = function(response, onSuccess: OnSuccess, onError: OnError){
             for (var j = 2; j < toRun.length; j++) {
               toRun[j][1][0].secretId = response.secretId;
             }
             onSuccess();
           };
-          
+
           for (var i = 0; i < data.groupIds.length; ++i) {
             var gid = data.groupIds[i];
             var publicKeyString = keys.groupIdToPublicKey[gid];
@@ -775,33 +764,33 @@ var AddSecrets = clearCacheAndCall(function(args, data, onSuccess, onError) {
 });
 /**
  * AddSecret
- * 
- * args {uid: userId, gid: group_id, 
+ *
+ * args {uid: userId, gid: group_id,
  *       _privateKey: key object for me,
  *       secretId: If provided, adds an existing secret to a new group
  *       '_' : ['hostname', 'client secret', 'critical secret'],
- * 
+ *
  *       if chainedValue is set and group id is not, it is used in place of group id.
 
  * calls onSuccess with: see RPC.java
  */
-var AddSecret = clearCacheAndCall(function(args, gid, onSuccess, onError) {
-
+const AddSecret = clearCacheAndCall(function(args, gid: number, onSuccess: OnSuccess, onError: OnError) {
   try {
-
     // this is a horrible hack.
+    // TODO(tom): what does this do?
     if (onError === undefined) {
       onError = onSuccess;
       onSuccess = gid;
+      // $FlowFixMe
       gid = undefined;
     }
     if (args.gid === undefined) {
       args.gid = gid;
-      console.log('set gid to ' + gid);
+      console.log('set gid to ' + gid ? gid : "undefined");
     }
     assert(args.gid);
 
-    var wrappedOnSuccess = function(results) {
+    const wrappedOnSuccess = function(results) {
       try {
         onSuccess(results[0]);
       } catch (e) {
@@ -815,10 +804,10 @@ var AddSecret = clearCacheAndCall(function(args, gid, onSuccess, onError) {
       console.log('usage: mitro.js add --uid=me@example.com --gid=21 HOSTNAME client critical');
       process.exit(-1);
     } else {
-      AddSecrets(args, 
-        {groupIds : [args.gid], 
+      AddSecrets(args,
+        {groupIds : [args.gid],
         secretId : args.secretId,
-        clientData: args._[2], 
+        clientData: args._[2],
         // TODO: WTF?
         criticalData: (args._.length === 4) ? args._[3] : null},
         wrappedOnSuccess, onError);
@@ -832,14 +821,14 @@ var AddSecret = clearCacheAndCall(function(args, gid, onSuccess, onError) {
 
 /**
  * RemoveSecret
- * 
- * args {uid: userId, 
+ *
+ * args {uid: userId,
  *       gid: if provided, remove a secret from only this group
  *       _privateKey: key object for me,
  *       '_' : ['secret id'],
  * calls onSuccess with: see RPC.java
  */
-var RemoveSecret = clearCacheAndCall(function(args, onSuccess, onError) {
+var RemoveSecret = clearCacheAndCall(function(args, onSuccess: OnSuccess, onError: OnError) {
   try {
     assert(args.uid);
     var secretId;
@@ -863,18 +852,8 @@ var RemoveSecret = clearCacheAndCall(function(args, onSuccess, onError) {
 
 /**
  * AddIssue - report a new issue and add to the DB.
- * Args:
- *   args: 
- *     { url: url where the issue appeared, if any (string)
- *       type: type of issue (string)
- *       description: user description of issue (string)
- *       email : user id of the user reporting the issue (string)
- *     }
- *   onSuccess: function(response)
- *     callback to call
- *
- */ 
-var AddIssue = function(args, onSuccess, onError) {
+ */
+function AddIssue(args: Object, onSuccess: OnSuccess, onError: OnError) {
   try {
     console.log('>>Add Issue');
     PostToMitro(args, args, '/mitro-core/api/AddIssue', onSuccess, onError);
@@ -882,9 +861,9 @@ var AddIssue = function(args, onSuccess, onError) {
     console.log('>> exception in add issue');
     onError(makeLocalException(e));
   }
-};
+}
 
-var GetAuditLog = function (args, onSuccess, onError) {
+function GetAuditLog(args: Object, onSuccess: OnSuccess, onError: OnError) {
   try {
     console.log('>>Get Audit Log');
     var request = args;
@@ -893,14 +872,14 @@ var GetAuditLog = function (args, onSuccess, onError) {
     console.log('>> exception in get audit log');
     onError(makeLocalException(e));
   }
-};
+}
 
-var runCommandWithPrivateKey = function(cmdFcn, argv, unencryptedPrivateKey, onSuccessIn, onErrorIn) {
+function runCommandWithPrivateKey(cmdFcn: any, argv: any, unencryptedPrivateKey, onSuccessIn: any, onErrorIn: any) {
 
-    var onError = function(e) {
-      console.log('ERROR IN TRANSACTION CODE:', e.message, e.stack);
-      onErrorIn(mitro.lib.makeLocalException(e));
-    };
+  var onError = function(e) {
+    console.log('ERROR IN TRANSACTION CODE:', e.message, e.stack);
+    onErrorIn(makeLocalException(e));
+  };
 
   argv._privateKey = unencryptedPrivateKey;
   PostToMitro({}, argv, '/mitro-core/api/BeginTransaction', function(txResp) {
@@ -939,15 +918,15 @@ var runCommandWithPrivateKey = function(cmdFcn, argv, unencryptedPrivateKey, onS
     }
   }, onError);
   return true;
-};
+}
 
 
-var runCommand = function(cmdFcn, argv, onSuccess, onError) {
+var runCommand = function(cmdFcn: any, argv: Object, onSuccess: OnSuccess, onError: OnError) {
     var success = false;
-    onSuccess = onSuccess || mitro.rpc.DefaultResponseHandler;
-    onError = onError || mitro.rpc.DefaultErrorHandler;
+    onSuccess = onSuccess || rpc.DefaultResponseHandler;
+    onError = onError || rpc.DefaultErrorHandler;
 
-    argv._keyCache = argv._keyCache || mitro.keycache.MakeKeyCache();
+    argv._keyCache = argv._keyCache || keycache.MakeKeyCache();
     if (cmdFcn) {
       if (cmdFcn !== AddIdentity && cmdFcn !== GetPrivateKey) {
         // get the current user's private key and pass it along.
@@ -967,7 +946,7 @@ var runCommand = function(cmdFcn, argv, onSuccess, onError) {
 };
 
 
-var parallel = function(fcnArgListTuple, onSuccess, onError) {
+function parallel(fcnArgListTuple: Array<any>, onSuccess: OnSuccess, onError: OnError) {
   if (fcnArgListTuple.length === 0) {
     setTimeout(function() {onSuccess([]);}, 0);
     return;
@@ -1003,9 +982,10 @@ var parallel = function(fcnArgListTuple, onSuccess, onError) {
     return function(response) {_success(counter, response);};
   };
 
-  for (var i in fcnArgListTuple) {
-    var myargs = fcnArgListTuple[i][1];
-    if (fcnArgListTuple[i][2] === undefined || fcnArgListTuple[i][2] === undefined) {
+  let i = 0;
+  for (let x of fcnArgListTuple) {
+    var myargs = x[1];
+    if (x[2] === undefined || x[2] === undefined) {
       myargs.push(makeCallback(i));
       myargs.push(_error);
     } else {
@@ -1013,7 +993,8 @@ var parallel = function(fcnArgListTuple, onSuccess, onError) {
       myargs.push(_error);
       myargs.push(makeCallback(i));
     }
-    fcnArgListTuple[i][0].apply(undefined, myargs);
+    i++;
+    x[0].apply(undefined, myargs);
   }
 };
 
@@ -1023,20 +1004,21 @@ var parallel = function(fcnArgListTuple, onSuccess, onError) {
 @param {function(Error)} onError
 @param {*=} chainedArg
 */
-var series = function(fcnArgListTuple, onSuccess, onError, chainedArg) {
+function series(fcnArgListTuple: Array<any>, onSuccess: OnSuccess, onError: OnError, chainedArg: any) {
   var labels = [];
-  for (var i in fcnArgListTuple) {
-    if (typeof(fcnArgListTuple[i][0]) === 'string' || typeof(fcnArgListTuple[i][0]) === 'number') {
+  for (let x of fcnArgListTuple) {
+    if (typeof(x[0]) === 'string' || typeof(x[0]) === 'number') {
       // assume this is a label
-      labels[i] = String(fcnArgListTuple[i][0]);
-      fcnArgListTuple[i].shift();
+      labels.push(String(x[0]));
+      x.shift();
+    } else {
+      labels.push(undefined);
     }
   }
   return _series(labels, fcnArgListTuple, onSuccess, onError, chainedArg);
-};
+}
 
-
-var _series = function(labels, fcnArgListTuple, onSuccess, onError, chainedArg) {
+function _series(labels: Array<any>, fcnArgListTuple: Array<any>, onSuccess: OnSuccess, onError: OnError, chainedArg) {
   if (fcnArgListTuple.length === 0) {
     setTimeout(function() {onSuccess([]);}, 0);
     return;
@@ -1068,12 +1050,12 @@ var _series = function(labels, fcnArgListTuple, onSuccess, onError, chainedArg) 
       onSuccess(rvals, rvalMap);
     }
   };
-  
+
   var _error = onError;
 
-  for (var i in fcnArgListTuple) {
-    var myargs = fcnArgListTuple[i][1];
-    if (fcnArgListTuple[i][2] === undefined || fcnArgListTuple[i][2] === undefined) {
+  for (let x of fcnArgListTuple) {
+    var myargs = x[1];
+    if (x[2] === undefined || x[2] === undefined) {
       myargs.push(_success);
       myargs.push(_error);
     } else {
@@ -1081,15 +1063,15 @@ var _series = function(labels, fcnArgListTuple, onSuccess, onError, chainedArg) 
       myargs.push(_error);
       myargs.push(_success);
     }
-    functions.push([fcnArgListTuple[i][0], myargs]);
+    functions.push([x[0], myargs]);
   }
   functions.reverse();
   var fcnargs = functions.pop();
-  
+
   // replace any undefined value with the chained value or push to the end.
-  for (i in fcnargs[1]) {
-    if (fcnargs[1][i] === undefined) {
-      fcnargs[1][i] = chainedArg;
+  for (let x of fcnargs[1]) {
+    if (x === undefined) {
+      x = chainedArg;
       chainedArg = undefined;
       break;
     }
@@ -1102,43 +1084,46 @@ var _series = function(labels, fcnArgListTuple, onSuccess, onError, chainedArg) 
 // TODO: implement batch operations in Java
 var batch = series;
 
-lib.parallel = parallel;
-lib.series = series;
-lib.batch = batch;
+function clearCaches() {delete txnSpecificCaches[GENERAL_TRANSACTION];};
 
-lib.GetGroup = GetGroup;
-lib.GetSecret =  GetSecret;
-lib.GetPrivateKey =  GetPrivateKey;
-lib.GetPublicKey =  GetPublicKey;
-lib.GetPublicKeys =  GetPublicKeys;
-lib.GetUserAndGroupPublicKeys = GetUserAndGroupPublicKeys;
-lib.MutateMembership = MutateMembership;
-lib.AddSecret = AddSecret;
-lib.AddSecrets = AddSecrets;
 
-lib.RetrieveDeviceSpecificKey = RetrieveDeviceSpecificKey;
-lib.AddMember =  AddMember;
-lib.AddGroup =  AddGroup;
-lib.AddIdentity =  AddIdentity;
-lib.RemoveSecret = RemoveSecret;
-lib.RemoveMember =  RemoveMember;
-lib.ListGroupsAndSecrets = ListGroupsAndSecrets;
-lib.GetOrganizationState = GetOrganizationState;
-lib.AddIssue = AddIssue;
-lib.GetAuditLog = GetAuditLog;
-lib.runCommand = runCommand;
-lib.runCommandWithPrivateKey = runCommandWithPrivateKey;
+export {
 
-lib.initForTest = initForTest;
-lib.postEndTransaction = postEndTransaction;
-lib.getCrypto = getCrypto;
-lib.PostToMitro = PostToMitro;
-lib.PostToMitroAgent = PostToMitroAgent;
-lib.setPostToMitroForTest = setPostToMitroForTest;
-lib.decryptSecretWithGroups = decryptSecretWithGroups;
-lib.EditEncryptedPrivateKey = EditEncryptedPrivateKey;
-lib.clearCaches = function() {delete txnSpecificCaches[null];};
-lib.makeLocalException = makeLocalException;
+  parallel,
+  series,
+  batch,
 
-lib.checkTwoFactor = checkTwoFactor;
-})();
+  GetGroup,
+  GetSecret,
+  GetPrivateKey,
+  GetPublicKey,
+  GetPublicKeys,
+  GetUserAndGroupPublicKeys,
+  MutateMembership,
+  AddSecret,
+  AddSecrets,
+
+  RetrieveDeviceSpecificKey,
+  AddMember,
+  AddGroup,
+  AddIdentity,
+  RemoveSecret,
+  RemoveMember,
+  ListGroupsAndSecrets,
+  GetOrganizationState,
+  AddIssue,
+  GetAuditLog,
+  runCommand,
+  runCommandWithPrivateKey,
+
+  postEndTransaction,
+  PostToMitro,
+  PostToMitroAgent,
+  setPostToMitroForTest,
+  decryptSecretWithGroups,
+  EditEncryptedPrivateKey,
+  clearCaches,
+  makeLocalException,
+
+  checkTwoFactor,
+}

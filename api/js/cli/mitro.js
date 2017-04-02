@@ -26,12 +26,12 @@
 
 //#!/usr/bin/env node
 
-var optimist = require('optimist');
-var assert = require('assert');
-var lib = require('./mitro_lib.js');
-var rpc = require('./rpc');
-var fe = require('./mitro_fe');
-var fs = require('fs');
+//var optimist = require('optimist');
+//var assert = require('assert');
+//var lib = require('./mitro_lib.js');
+//var rpc = require('./rpc');
+//var fe = require('./mitro_fe');
+//var fs = require('fs'); // TODO(flow)
 
 var allowableCommands = {
     'getpub' : lib.GetPublicKey,

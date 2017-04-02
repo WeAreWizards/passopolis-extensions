@@ -12,7 +12,7 @@
  *     the Free Software Foundation, either version 3 of the License, or
  *     (at your option) any later version.
  *
- *     This program is distributed in the hope that it will be useful,
+ *     This program is distributed in the hope that ist will be useful,
  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
@@ -52,15 +52,11 @@ Decrypting:
 
 /** @suppress{duplicate} */
 var mitro = mitro || {};
-/** @suppress{duplicate} */
-var keyczar = keyczar || require('keyczarjs');
+
+// TODO(flow): require keyczar
+
 (function() {
 mitro.crypto = {};
-if (typeof module !== 'undefined' && module.exports) {
-	// define node.js module
-	mitro.cache = require('./lru_cache.js');
-	module.exports = mitro.crypto;
-}
 var crypto = mitro.crypto;
 
 /** Only for type checking. TODO: Use this? Make it an interface?
@@ -162,7 +158,7 @@ function _makeKeyNoMemo(encryptionKey, signingKey) {
 		}
 		return memoResult;
 	};
-	
+
 	key.verify = function(message, signature) {
 		return signingKey.verify(message, signature);
 	};
@@ -204,7 +200,7 @@ function _makeKeyNoMemo(encryptionKey, signingKey) {
 			var memoKey = mitro.cache.makeKey('decrypt', message);
 			var memoResult = cache.getItem(memoKey);
 			if (memoResult) {
-				
+
 			} else {
 				memoResult = key.decryptNoMemo(message);
 				cache.setItem(memoKey, memoResult);
