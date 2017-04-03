@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -24,27 +25,32 @@
  * *****************************************************************************
  */
 
-var showSpinny = function($loginButton) {
+
+import {$, jQuery} from "../../../../node_modules/jquery/dist/jquery";
+import { _ } from "../../../../node_modules/underscore/underscore";
+import { templates } from "../../../../api/js/cli/externs_web";
+
+export function showSpinny($loginButton: jQuery) {
     var $img = $('<img src="../img/ajax-loader.gif">');
     $loginButton.after($img);
     $loginButton.hide();
     return $img;
 };
 
-var hideSpinny = function($loginButton, $spinny) {
+export function hideSpinny($loginButton: jQuery, $spinny: jQuery) {
     $spinny.remove();
     $loginButton.show();
 };
 
-var reload = function () {
+export function reload() {
     window.location.reload();
 };
 
 /**
 @param {function(Event)=} onCancelButtonClicked
 */
-var showDialogWithButtons = function (title, message, primaryButtonText,
-        cancelButtonText, onPrimaryButtonClicked, onCancelButtonClicked) {
+export function showDialogWithButtons(title: string, message: string, primaryButtonText: string,
+                                      cancelButtonText: ?string, onPrimaryButtonClicked: any, onCancelButtonClicked: any) {
     var $dialog = $(templates['modal-dialog-template'].render(
         {title: title,
          message: message,
@@ -71,65 +77,63 @@ var showDialogWithButtons = function (title, message, primaryButtonText,
     return $dialog;
 };
 
-var showDialog = function (title, message, onDismiss) {
+export function showDialog(title: string, message: string, onDismiss: any) {
     return showDialogWithButtons(title, message, 'OK', null, onDismiss);
 };
 
 /**
 @param {function(Event)=} onDismiss
 */
-var showErrorDialog = function (message, onDismiss) {
+export function showErrorDialog(message: string, onDismiss: any) {
     return showDialog('Error', message, onDismiss);
 };
 
-var showDeleteDialog = function (title, message, onDelete) {
+export function showDeleteDialog(title: string, message: string, onDelete: any) {
     return showDialogWithButtons(title, message, 'Delete', 'Cancel', onDelete);
 };
 
-var onBackgroundError = function (error) {
+export function onBackgroundError(error: Error) {
     console.log('background error', error);
 
-    showErrorDialog(error.userVisibleError ? error.userVisibleError : error);
+  showErrorDialog(error.userVisibleError ? (error.userVisibleError : any) : error.toString());
 };
 
-var reloadOnError = function (error) {
+export function reloadOnError(error: Error) {
     console.log('reloadOnError', error);
-    showErrorDialog(error, function () {
+    showErrorDialog(error.toString(), function () {
         reload();
     });
 };
-        
-var validateEmail = function (emailString) {
+
+export function validateEmail(emailString: string) {
     // The HTML5 regexp, must be in sync with the Python code.
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/states-of-the-type-attribute.html#valid-e-mail-address
     var regex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
     return emailString.match(regex);
 };
 
-var isVisibleGroup = function (group) {
+type Group = any
+
+export function isVisibleGroup(group: Group) {
     return !(group.isNonOrgPrivateGroup || group.isOrgPrivateGroup || group.isTopLevelOrg || group.autoDelete);
 };
 
-var filterVisibleGroups = function (groups) {
+export function filterVisibleGroups(groups: Array<Group>) {
     return _.filter(groups, isVisibleGroup);
 };
 
-var showModal = function ($modal) {
+export function showModal($modal: jQuery) {
     $modal.modal({backdrop: 'static'}).modal('show');
 };
 
-var resetAndShowModal = function ($modal) {
+export function resetAndShowModal($modal: jQuery) {
     var $form = $modal.find('form');
     $form[0].reset();
     showModal($modal);
 };
 
 // Formats a timestamp in ms for the user's locale.
-var formatTimestamp = function (timestampMs) {
+export function formatTimestamp(timestampMs: number) {
     var d = new Date(timestampMs);
     return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
 };
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports.isVisibleGroup = isVisibleGroup;
-}
