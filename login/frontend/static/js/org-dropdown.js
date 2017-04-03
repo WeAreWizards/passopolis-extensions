@@ -24,112 +24,100 @@
  * *****************************************************************************
  */
 
-var initOrgDropdown;
-var getOrgDropdownId;
-var selectOrgDropdownId;
-(function () {
-    'use strict';
 
-    var getOrgDropdownSelection = function ($orgDropdown) {
-        return $orgDropdown.find('.select');
-    };
 
-    var getOrgDropdownList = function ($orgDropdown) {
-        return $orgDropdown.find('.dropdown-select');
-    };
+var getOrgDropdownSelection = function ($orgDropdown) {
+  return $orgDropdown.find('.select');
+};
 
-    var createOrgDropdownItem = function (name, value) {
-        var $a = $('<a></a>').attr('data-id', value).text(name);
-        return $('<li></li>').append($a);
-    };
+var getOrgDropdownList = function ($orgDropdown) {
+  return $orgDropdown.find('.dropdown-select');
+};
 
-    var populateOrgDropdown = function ($orgDropdown, orgs) {
-        var $orgList = getOrgDropdownList($orgDropdown);
-        $orgList.children().remove();
+var createOrgDropdownItem = function (name, value) {
+  var $a = $('<a></a>').attr('data-id', value).text(name);
+  return $('<li></li>').append($a);
+};
 
-        for (var i = 0; i < orgs.length; i++) {
-            var org = orgs[i];
-            $orgList.append(createOrgDropdownItem(org.name, org.id));
-        }
-    };
+var populateOrgDropdown = function ($orgDropdown, orgs) {
+  var $orgList = getOrgDropdownList($orgDropdown);
+  $orgList.children().remove();
 
-    var getOrgIdFromItem = function ($orgItem) {
-        var orgId = parseInt($orgItem.attr('data-id'), 10);
-        return isNaN(orgId) ? null : orgId;
-    };
+  for (var i = 0; i < orgs.length; i++) {
+    var org = orgs[i];
+    $orgList.append(createOrgDropdownItem(org.name, org.id));
+  }
+};
 
-    getOrgDropdownId = function ($orgDropdown) {
-        return getOrgIdFromItem(getOrgDropdownSelection($orgDropdown));
-    };
+var getOrgIdFromItem = function ($orgItem) {
+  var orgId = parseInt($orgItem.attr('data-id'), 10);
+  return isNaN(orgId) ? null : orgId;
+};
 
-    var selectOrgDropdownItem = function ($orgDropdown, $orgItem) {
-        var $orgSelection = getOrgDropdownSelection($orgDropdown);
-        $orgSelection.attr('data-id', $orgItem.attr('data-id'));
-        $orgSelection.text($orgItem.text());
-    };
+export function getOrgDropdownId($orgDropdown) {
+  return getOrgIdFromItem(getOrgDropdownSelection($orgDropdown));
+};
 
-    // Select the org item with the given org id, or create a new item if it
-    // doesn't exist.
-    /**
-    @param {!jQuery} $orgDropdown
-    @param {?number} selOrgId
-    */
-    selectOrgDropdownId = function ($orgDropdown, selOrgId) {
-        var $orgSelection = getOrgDropdownSelection($orgDropdown);
-        var $orgList = getOrgDropdownList($orgDropdown);
-        var $selOrgItem = null;
+var selectOrgDropdownItem = function ($orgDropdown, $orgItem) {
+  var $orgSelection = getOrgDropdownSelection($orgDropdown);
+  $orgSelection.attr('data-id', $orgItem.attr('data-id'));
+  $orgSelection.text($orgItem.text());
+};
 
-        $orgList.find('a').each(function () {
-            var orgId = getOrgIdFromItem($(this));
-            if (orgId === selOrgId) {
-               $selOrgItem = $(this);
-            }
-        });
+// Select the org item with the given org id, or create a new item if it
+// doesn't exist.
+/**
+   @param {!jQuery} $orgDropdown
+   @param {?number} selOrgId
+*/
+export function selectOrgDropdownId($orgDropdown, selOrgId) {
+  var $orgSelection = getOrgDropdownSelection($orgDropdown);
+  var $orgList = getOrgDropdownList($orgDropdown);
+  var $selOrgItem = null;
 
-        if ($selOrgItem === null) {
-            if (selOrgId) {
-                // Item belongs to an org that user is not a member of.
-                // Show the org id since we don't know its name.
-                $selOrgItem = createOrgDropdownItem(selOrgId, selOrgId);
-            } else {
-                $selOrgItem = createOrgDropdownItem('None', null);
-            }
-            $orgList.append($selOrgItem);
-        }
-
-        selectOrgDropdownItem($orgDropdown, $selOrgItem);
-    };
-
-    /**
-    @param {!jQuery} $orgDropdown
-    @param {!Array.<!Object>} orgs
-    @param {?number} selOrgId
-    @param {function(!jQuery)=} onSelect
-    */
-    initOrgDropdown = function ($orgDropdown, orgs, selOrgId, onSelect) {
-        populateOrgDropdown($orgDropdown, orgs);
-        selectOrgDropdownId($orgDropdown, selOrgId);
-
-        $orgDropdown.find('li').click(function () {
-            selectOrgDropdownItem($orgDropdown, $(this).find('a'));
-            if (onSelect) {
-                onSelect($orgDropdown);
-            }
-        });
-
-        // Hide orgs field if user doesn't belong to any orgs and secret
-        // doesn't belong to an org.
-        if (!selOrgId && orgs.length === 0) {
-            $orgDropdown.addClass('hide');
-        } else {
-            $orgDropdown.removeClass('hide');
-        }
-    };
-
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports = {
-            initOrgDropdown: initOrgDropdown,
-            getOrgDropdownId: getOrgDropdownId,
-            selectOrgDropdownId: selectOrgDropdownId};
+  $orgList.find('a').each(function () {
+    var orgId = getOrgIdFromItem($(this));
+    if (orgId === selOrgId) {
+      $selOrgItem = $(this);
     }
-})();
+  });
+
+  if ($selOrgItem === null) {
+    if (selOrgId) {
+      // Item belongs to an org that user is not a member of.
+      // Show the org id since we don't know its name.
+      $selOrgItem = createOrgDropdownItem(selOrgId, selOrgId);
+    } else {
+      $selOrgItem = createOrgDropdownItem('None', null);
+    }
+    $orgList.append($selOrgItem);
+  }
+
+  selectOrgDropdownItem($orgDropdown, $selOrgItem);
+};
+
+/**
+   @param {!jQuery} $orgDropdown
+   @param {!Array.<!Object>} orgs
+   @param {?number} selOrgId
+   @param {function(!jQuery)=} onSelect
+*/
+export function initOrgDropdown($orgDropdown, orgs, selOrgId, onSelect) {
+  populateOrgDropdown($orgDropdown, orgs);
+  selectOrgDropdownId($orgDropdown, selOrgId);
+
+  $orgDropdown.find('li').click(function () {
+    selectOrgDropdownItem($orgDropdown, $(this).find('a'));
+    if (onSelect) {
+      onSelect($orgDropdown);
+    }
+  });
+
+  // Hide orgs field if user doesn't belong to any orgs and secret
+  // doesn't belong to an org.
+  if (!selOrgId && orgs.length === 0) {
+    $orgDropdown.addClass('hide');
+  } else {
+    $orgDropdown.removeClass('hide');
+  }
+};

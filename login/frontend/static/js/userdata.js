@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -25,33 +26,17 @@
  */
 
 /** @suppress{duplicate} */
-var mitro = mitro || {};
-/** @suppress {duplicate} */
-var kew = kew || require('../../../client/kew');
-// HACK to merge org-info in Node
-(function(){
-  if (!('loadOrganizationInfo' in mitro)) {
-    var mitro2 = require('./org-info.js');
-    for (var p in mitro2) {
-      mitro[p] = mitro2[p];
-    }
-  }
-})();
-/** @suppress{duplicate} */
-var assert = assert || require('../../../common/utils').assert;
-/** @suppress{duplicate} */
-var assertIsNumber = assertIsNumber || require('../../../common/utils').assertIsNumber;
-/** @suppress{duplicate} */
-var dictValues = dictValues || require('../../../common/utils').dictValues;
-
-
-(function() {
+import { assert } from "../../../../api/js/cli/assert";
+import { assertIsNumber, dictValues } from "../../../common/utils";
+import * as kew from "../../../../api/js/cli/kew";
+import { background } from "./background-init";
+import * as org_info from "./org-info";
 
 /**
 @constructor
 @struct
 */
-mitro.UserData = function() {
+export function UserData() {
   this.secrets = null;
   /** @type {mitro.OrganizationInfo} */
   this.organizationInfo = null;
@@ -80,7 +65,7 @@ var groupSearch = function(groups, groupId) {
 @param {number} groupId
 @return {mitro.GroupInfo}
 */
-mitro.UserData.prototype.getGroup = function(groupId) {
+UserData.prototype.getGroup = function(groupId) {
   if (!this.groups) {
     throw new Error('groups must not be null: UserData uninitialized');
   }
@@ -102,7 +87,7 @@ mitro.UserData.prototype.getGroup = function(groupId) {
 @param {number} secretId
 @return {mitro.Secret}
 */
-mitro.UserData.prototype.getSecret = function(secretId) {
+UserData.prototype.getSecret = function(secretId) {
   assertIsNumber(secretId);
   for (var i = 0; i < this.secrets.length; i++) {
     var secret = this.secrets[i];
@@ -117,7 +102,7 @@ mitro.UserData.prototype.getSecret = function(secretId) {
 @param {number} groupId
 @return {!Array.<!mitro.Secret>}
 */
-mitro.UserData.prototype.getSecretsForGroup = function(groupId) {
+UserData.prototype.getSecretsForGroup = function(groupId) {
   // find secrets in both the personal and organization secret lists
   var secretLists = [this.secrets];
   if (this.organization) {
@@ -145,7 +130,7 @@ mitro.UserData.prototype.getSecretsForGroup = function(groupId) {
 @param {?number} orgId
 @return {boolean}
 */
-mitro.UserData.prototype.userBelongsToOrg = function(orgId) {
+UserData.prototype.userBelongsToOrg = function(orgId) {
   return orgId !== undefined && orgId !== null &&
     this.organizationInfo.getOrganization(orgId) !== null;
 };
@@ -153,7 +138,7 @@ mitro.UserData.prototype.userBelongsToOrg = function(orgId) {
 /**
 @return {Array.<!mitro.GroupInfo>}
 */
-mitro.UserData.prototype.getGroupsVisibleToSecret = function() {
+UserData.prototype.getGroupsVisibleToSecret = function() {
   if (this.orgId === null) {
     return this.groups;
   } else if (this.userBelongsToOrg(this.orgId)) {
@@ -166,7 +151,7 @@ mitro.UserData.prototype.getGroupsVisibleToSecret = function() {
 /**
 @return {Array.<string>}
 */
-mitro.UserData.prototype.getUsersVisibleToSecret = function() {
+UserData.prototype.getUsersVisibleToSecret = function() {
   if (this.orgId === null) {
     return this.users;
   } else if (this.userBelongsToOrg(this.orgId)) {
@@ -179,7 +164,7 @@ mitro.UserData.prototype.getUsersVisibleToSecret = function() {
 /**
 @return {Array.<string>}
 */
-mitro.UserData.prototype.getUsersVisibleToGroup = function() {
+UserData.prototype.getUsersVisibleToGroup = function() {
   if (this.orgId === null) {
     return this.users;
   } else if (this.userBelongsToOrg(this.orgId)) {
@@ -192,7 +177,7 @@ mitro.UserData.prototype.getUsersVisibleToGroup = function() {
 /**
 @return {Array.<!mitro.GroupInfo>}
 */
-mitro.UserData.prototype.getSecretsVisibleToGroup = function() {
+UserData.prototype.getSecretsVisibleToGroup = function() {
   if (this.orgId === null) {
     return this.secrets;
   } else if (this.userBelongsToOrg(this.orgId)) {
@@ -206,7 +191,7 @@ mitro.UserData.prototype.getSecretsVisibleToGroup = function() {
 @param {number} groupId
 @return {boolean}
 */
-mitro.UserData.prototype.userBelongsToSameOrgAsGroup = function(groupId) {
+UserData.prototype.userBelongsToSameOrgAsGroup = function(groupId) {
   var group = this.getGroup(groupId);
   if (group === null) {
     throw new Error('group does not exist; id: ' + groupId);
@@ -218,7 +203,7 @@ mitro.UserData.prototype.userBelongsToSameOrgAsGroup = function(groupId) {
 @param {number} secretId
 @return {boolean}
 */
-mitro.UserData.prototype.userBelongsToSameOrgAsSecret = function(secretId) {
+UserData.prototype.userBelongsToSameOrgAsSecret = function(secretId) {
   var secret = this.getSecret(secretId);
   if (secret === null) {
     throw new Error('secret does not exist; id: ' + secretId);
@@ -230,7 +215,7 @@ mitro.UserData.prototype.userBelongsToSameOrgAsSecret = function(secretId) {
 secrets. As a regular user, this is their organization secrets.
 @return {!Array.<!mitro.GroupInfo>}
 */
-mitro.UserData.prototype.getOrganizationSecrets = function(orgId, org) {
+UserData.prototype.getOrganizationSecrets = function(orgId, org) {
   var organizationSecrets = [];
   if (org && this.organizationInfo) {
     if (this.organizationInfo.isOrgAdminFor(orgId)) {
@@ -253,7 +238,7 @@ mitro.UserData.prototype.getOrganizationSecrets = function(orgId, org) {
 secrets. As a regular user, this is their organization secrets.
 @return {!Array.<!mitro.GroupInfo>}
 */
-mitro.UserData.prototype.getSelectedOrganizationSecrets = function() {
+UserData.prototype.getSelectedOrganizationSecrets = function() {
   var selOrgInfo = this.organizationInfo.getSelectedOrganization();
   if (selOrgInfo) {
     return this.getOrganizationSecrets(this.orgId, this.organization);
@@ -265,7 +250,7 @@ mitro.UserData.prototype.getSelectedOrganizationSecrets = function() {
 /**
 @return {!Array.<!mitro.OrganizationMetadata>}
 */
-mitro.UserData.prototype.getOrganizations = function () {
+UserData.prototype.getOrganizations = function () {
   return this.organizationInfo.getOrganizations();
 };
 
@@ -273,14 +258,14 @@ mitro.UserData.prototype.getOrganizations = function () {
 @param {number} orgId
 @return {mitro.OrganizationMetadata}
 */
-mitro.UserData.prototype.getOrganization = function (orgId) {
+UserData.prototype.getOrganization = function (orgId) {
   return this.organizationInfo.getOrganization(orgId);
 };
 
 /**
 @return {mitro.OrganizationInfo}
 */
-mitro.UserData.prototype.getAllOrganizationInfo = function() {
+UserData.prototype.getAllOrganizationInfo = function() {
   return this.organizationInfo;
 };
 
@@ -308,27 +293,27 @@ var callBackgroundAsPromise = function(instance, method, varArgs) {
 };
 
 /** @return {!kew.Promise.<!mitro.UsersGroupsSecrets>}} */
-var listUsersGroupsAndSecretsWithPromise = function () {
+function listUsersGroupsAndSecretsWithPromise() {
   return callBackgroundAsPromise(background, background.listUsersGroupsAndSecrets);
 };
 
 /** @return {!kew.Promise.<!mitro.OrganizationInfo>} */
-var getOrganizationInfoWithPromise = function () {
-  return callBackgroundAsPromise(null, mitro.loadOrganizationInfo);
+function getOrganizationInfoWithPromise() {
+  return callBackgroundAsPromise(null, org_info.loadOrganizationInfo);
 };
 
 /**
 @param {number} organizationId
 */
-var getOrganizationWithPromise = function (organizationId) {
+function getOrganizationWithPromise(organizationId) {
   return callBackgroundAsPromise(background, background.getOrganization, organizationId);
 };
 
 /** Loads UserData from the background using a Promise.
 @return {!kew.Promise}
 */
-mitro.loadUserDataPromise = function () {
-  var data = new mitro.UserData();
+export function loadUserDataPromise() {
+  var data = new UserData();
 
   // get all secrets (not needed for manage-secrets page; but simplifies life?)
   var usersGroupsSecretsPromise = listUsersGroupsAndSecretsWithPromise();
@@ -355,12 +340,16 @@ mitro.loadUserDataPromise = function () {
 @param {function(!mitro.UserData)} onSuccess
 @param {function(!Error)} onError
 */
-mitro.loadUserData = function (onSuccess, onError) {
-  var userDataPromise = mitro.loadUserDataPromise();
+
+type OnSuccess = any // TODO(tom)
+type OnError = any // TODO(tom)
+
+export function loadUserData(onSuccess: OnSuccess, onError: OnError) {
+  var userDataPromise = loadUserDataPromise();
   userDataPromise.then(onSuccess).fail(onError);
 };
 
-mitro.loadOrganizationPromise = function (userData, orgId) {
+export function loadOrganizationPromise(userData: UserData, orgId: number) {
   assertIsNumber(orgId);
   var organizationPromise = getOrganizationWithPromise(orgId).then(function (result) {
     userData.orgId = orgId;
@@ -372,8 +361,8 @@ mitro.loadOrganizationPromise = function (userData, orgId) {
   return organizationPromise;
 };
 
-mitro.loadOrganization = function (userData, orgId, onSuccess, onError) {
-  var organizationPromise = mitro.loadOrganizationPromise(userData, orgId);
+export function loadOrganization(userData: UserData, orgId: number, onSuccess: OnSuccess, onError: OnError) {
+  var organizationPromise = loadOrganizationPromise(userData, orgId);
   organizationPromise.then(onSuccess).fail(onError);
 };
 
@@ -381,7 +370,7 @@ mitro.loadOrganization = function (userData, orgId, onSuccess, onError) {
 ListMySecretsAndGroups doesn't return groupMap, needed to display the secret ACL.
 @param {number} secretId
 @return {!kew.Promise} */
-mitro.getCompleteSecretPromise = function (secretId) {
+export function getCompleteSecretPromise(secretId: number) {
   assertIsNumber(secretId);
   return callBackgroundAsPromise(background, background.getSiteData, secretId);
 };
@@ -392,11 +381,11 @@ mitro.getCompleteSecretPromise = function (secretId) {
 @param {function(!mitro.UserData, !mitro.Secret)} onSuccess
 @param {function(!Error)} onError
 */
-mitro.loadUserDataAndSecret = function (secretId, onSuccess, onError) {
+export function loadUserDataAndSecret(secretId: number, onSuccess: OnSuccess, onError: OnError) {
   assertIsNumber(secretId);
 
-  var userDataPromise = mitro.loadUserDataPromise();
-  var secretPromise = mitro.getCompleteSecretPromise(secretId);
+  var userDataPromise = loadUserDataPromise();
+  var secretPromise = getCompleteSecretPromise(secretId);
   var bothPromise = kew.all([userDataPromise, secretPromise]);
   bothPromise.then(function(results) {
     var userData = results[0];
@@ -405,7 +394,7 @@ mitro.loadUserDataAndSecret = function (secretId, onSuccess, onError) {
     var loadOrgIfNeeded = null;
     if (secret !== null && userData.userBelongsToOrg(secret.owningOrgId)) {
       // loadOrganization modifies userData, so we ignore the result
-      loadOrgIfNeeded = mitro.loadOrganizationPromise(userData, secret.owningOrgId);
+      loadOrgIfNeeded = loadOrganizationPromise(userData, secret.owningOrgId);
     } else {
       loadOrgIfNeeded = new kew.Promise();
       loadOrgIfNeeded.resolve(null);
@@ -423,32 +412,25 @@ mitro.loadUserDataAndSecret = function (secretId, onSuccess, onError) {
 @param {function(!mitro.UserData, !mitro.GroupInfo)} onSuccess
 @param {function(!Error)} onError
 */
-mitro.loadUserDataAndGroup = function (groupId, onSuccess, onError) {
+function loadUserDataAndGroup(groupId: number, onSuccess: OnSuccess, onError: OnError) {
   assert(typeof groupId === 'number');
 
   var userData = null;
-  var loadedUserAndOrgPromise = mitro.loadUserDataPromise().then(function (userDataResult) {
+  var loadedUserAndOrgPromise = loadUserDataPromise().then(function (userDataResult) {
     userData = userDataResult;
     if (userData.organizationInfo.selectedOrgId !== null) {
       // user is a member of an organizations: load it
-      return mitro.loadOrganizationPromise(userData, userData.organizationInfo.selectedOrgId);
+      return loadOrganizationPromise(userData, userData.organizationInfo.selectedOrgId);
     }
     return null;
   });
 
   loadedUserAndOrgPromise.then(function(organization) {
+    if (userData === null) {
+      throw "userData unexpectedly null";
+    }
+
     var group = userData.getGroup(groupId);
     onSuccess(userData, group);
   }).fail(onError);
-};
-
-mitro.hackBackgroundForTest = function (bg) {
-  background = bg;
-  // pass background into the org-info module, and reset its internal caches
-  mitro.hackOrgInfoBackgroundForTest(bg);
-};
-
-if (typeof(module) !== 'undefined' && module.exports) {
-  module.exports = mitro;
 }
-})();

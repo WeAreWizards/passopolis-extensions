@@ -24,15 +24,11 @@
  * *****************************************************************************
  */
 
+import * as helpers_common from "../common/helpers_common";
+
 var helpers_background = {};
 (function(){
 
-var helpers_common;
-if (typeof(module) !== 'undefined') {
-    helpers_common = require('../common/helpers_common');
-} else {
-    helpers_common = window.helpers_common;
-}
 
 var _createMitroTab = function(chromeTab) {
     var tab = new helpers_common.MitroTab(chromeTab.id);

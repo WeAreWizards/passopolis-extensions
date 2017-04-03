@@ -26,76 +26,63 @@
 
 // Encoding/decoding usernames and passwords in browser hashes
 var userpass = {};
-(function(){
-  'use strict';
 
-  var decodeQueryString;
+import { decodeQueryString } from "./querystring";
 
-  if (typeof(window) === 'undefined') {
-    decodeQueryString = require('./querystring');
+
+export  function encodeUsernamePassword(username, password) {
+  var output = 'u=';
+  output += encodeURIComponent(username);
+  output += '&p=';
+  output += encodeURIComponent(password);
+  return output;
+}
+
+function makeNullResult() {
+  return {
+    username: null,
+    password: null
+  };
+}
+
+export function decodeUsernamePassword(queryString) {
+  var result = makeNullResult();
+
+  var decoded = decodeQueryString(queryString);
+  if (decoded.u) {
+    result.username = decoded.u;
+    if (decoded.p) {
+      result.password = decoded.p;
+    }
+    if (decoded.token) {
+      result.token = decoded.token;
+    }
+    if (decoded.token_signature) {
+      result.token_signature = decoded.token_signature;
+    }
+
+
+  } else if (Object.keys(decoded).length === 0) {
+    // no parameters decoded: treat the entire string as the user name
+    // this is compatible with the original version of the code
+    result.username = decodeURIComponent(queryString);
   } else {
-    decodeQueryString = window.decodeQueryString;
+    // query parameters decoded, but no username: return {null, null}
   }
 
-  userpass.encodeUsernamePassword = function(username, password) {
-    var output = 'u=';
-    output += encodeURIComponent(username);
-    output += '&p=';
-    output += encodeURIComponent(password);
-    return output;
-  };
+  return result;
+};
 
-  function makeNullResult() {
-    return {
-      username: null,
-      password: null
-    };
+/** @param {Window=} windowObject */
+export  function hashToUsernamePassword(windowObject) {
+  if (!windowObject) windowObject = window;
+
+  var hashString = windowObject.location.hash;
+  if (hashString.length === 0) {
+    return makeNullResult();
+  } else {
+    // window.location.hash always starts with '#'
+    hashString = hashString.substring(1);
+    return userpass.decodeUsernamePassword(hashString);
   }
-
-  userpass.decodeUsernamePassword = function(queryString) {
-    var result = makeNullResult();
-
-    var decoded = decodeQueryString(queryString);
-    if (decoded.u) {
-      result.username = decoded.u;
-      if (decoded.p) {
-        result.password = decoded.p;
-      }
-      if (decoded.token) {
-          result.token = decoded.token;
-      } 
-			if (decoded.token_signature) {
-	        result.token_signature = decoded.token_signature;
-	}
-
-	    
-    } else if (Object.keys(decoded).length === 0) {
-      // no parameters decoded: treat the entire string as the user name
-      // this is compatible with the original version of the code
-      result.username = decodeURIComponent(queryString);
-    } else {
-      // query parameters decoded, but no username: return {null, null}
-    }
-
-    return result;
-  };
-
-  /** @param {Window=} windowObject */
-  userpass.hashToUsernamePassword = function(windowObject) {
-    if (!windowObject) windowObject = window;
-
-    var hashString = windowObject.location.hash;
-    if (hashString.length === 0) {
-      return makeNullResult();
-    } else {
-      // window.location.hash always starts with '#'
-      hashString = hashString.substring(1);
-      return userpass.decodeUsernamePassword(hashString);
-    }
-  };
-
-  // define node.js module for testing
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = userpass;
-  }
-})();
+};
