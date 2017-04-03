@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -24,9 +25,14 @@
  * *****************************************************************************
  */
 
-var helper = new ExtensionHelper();
+import { ExtensionHelper } from "../../../chrome/helpers";
+import { Client } from "./client";
+
+var helper: ExtensionHelper = new ExtensionHelper();
+
 // TODO: Make Client implement BackgroundApi to avoid this cast?
-const background = /** @type {mitro.BackgroundApi} */ (new Client('extension'));
+const background: Client = new Client('extension');
+
 helper.bindClient(background);
 background.initApiCalls();
 background.initRemoteCalls('background', [
@@ -36,4 +42,4 @@ background.initRemoteCalls('background', [
   'getPendingGroupDiffs', 'commitPendingGroupDiffs', 'pregenerateKeys', 'getSiteData',
 ]);
 
-export { background };
+export { background, helper };

@@ -35,16 +35,16 @@ export function showSpinny($loginButton: jQuery) {
     $loginButton.after($img);
     $loginButton.hide();
     return $img;
-};
+}
 
 export function hideSpinny($loginButton: jQuery, $spinny: jQuery) {
     $spinny.remove();
     $loginButton.show();
-};
+}
 
 export function reload() {
     window.location.reload();
-};
+}
 
 /**
 @param {function(Event)=} onCancelButtonClicked
@@ -75,52 +75,51 @@ export function showDialogWithButtons(title: string, message: string, primaryBut
     $dialog.modal('show');
 
     return $dialog;
-};
+}
 
 export function showDialog(title: string, message: string, onDismiss: any) {
     return showDialogWithButtons(title, message, 'OK', null, onDismiss);
-};
+}
 
 /**
 @param {function(Event)=} onDismiss
 */
 export function showErrorDialog(message: string, onDismiss: any) {
     return showDialog('Error', message, onDismiss);
-};
+}
 
 export function showDeleteDialog(title: string, message: string, onDelete: any) {
     return showDialogWithButtons(title, message, 'Delete', 'Cancel', onDelete);
-};
+}
 
 export function onBackgroundError(error: Error) {
-    console.log('background error', error);
-
+  console.log('background error', error);
   showErrorDialog(error.userVisibleError ? (error.userVisibleError : any) : error.toString());
-};
+}
 
 export function reloadOnError(error: Error) {
     console.log('reloadOnError', error);
     showErrorDialog(error.toString(), function () {
         reload();
     });
-};
+}
 
 export function validateEmail(emailString: string) {
     // The HTML5 regexp, must be in sync with the Python code.
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/states-of-the-type-attribute.html#valid-e-mail-address
     var regex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
     return emailString.match(regex);
-};
+}
 
 type Group = any
 
 export function isVisibleGroup(group: Group) {
     return !(group.isNonOrgPrivateGroup || group.isOrgPrivateGroup || group.isTopLevelOrg || group.autoDelete);
-};
+}
 
 export function filterVisibleGroups(groups: Array<Group>) {
     return _.filter(groups, isVisibleGroup);
-};
+}
 
 export function showModal($modal: jQuery) {
     $modal.modal({backdrop: 'static'}).modal('show');

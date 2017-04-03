@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -23,6 +24,9 @@
  *     You can contact the authors at inbound@mitro.co.
  * *****************************************************************************
  */
+
+import { helper } from "./background-init";
+
 
 /**
  * Generates random string of the given length
@@ -53,7 +57,7 @@ var randomString = function(length) {
  * @param {string} address the local client address
  * ('background', 'extension', 'content', 'page')
  */
-var Client = function(address) {
+function Client(address: string) {
     // setting the local address
     this.address = address;
     // the dictionary containing the sender functions.
@@ -487,7 +491,7 @@ Client.prototype.processCallbacks = function(message) {
  * @param {string} to the remote calls destination address
  * @param {string} methodName
  */
-Client.prototype.setMethod = function(to, methodName) {
+Client.prototype.setMethod = function(to, methodName: string) {
     // we just make a link to the desired remote method
     // if we have direct access
     var that = this;
@@ -533,10 +537,10 @@ Client.prototype.setMethod = function(to, methodName) {
  * @param to {string} remote script address
  * @param methods {array} the desired methods names
  */
-Client.prototype.initRemoteCalls = function(to, methods) {
+Client.prototype.initRemoteCalls = function(to, methods: Array<string>) {
     methods = this.forceArray(methods);
-    for (var i=0; i<methods.length; i++) {
-        this.setMethod(to, methods[i]);
+    for (let method of methods) {
+        this.setMethod(to, method);
     }
 };
 
@@ -552,7 +556,7 @@ Client.prototype.initRemoteCalls = function(to, methods) {
  * @returns {!Array}
  * TODO(ivan): implement the more explicit array check
  */
-Client.prototype.forceArray = function(value) {
+Client.prototype.forceArray = function(value): Array<any> {
     switch (typeof(value)) {
         case 'object':
             if (Object.prototype.toString.call(value) === '[object Array]') {
@@ -636,14 +640,6 @@ Client.prototype.initRemoteExecution = function(from, methods, self) {
             return true;
         };
     })(this));
-};
-
-/**
- * setting the CommonJS module
- * to be used by the firefox main.js
- */
-if (typeof(exports) !== 'undefined') {
-    exports.Client = Client;
-} else if(typeof module !== 'undefined' && module.exports) {
-    module.exports = Client;
 }
+
+export { Client };

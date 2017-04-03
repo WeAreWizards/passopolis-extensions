@@ -28,36 +28,36 @@ var _CHROME_VERSION = parseInt(navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)
 
 var LAST_AUTOCOMPLETE_COMPLIANT_CHROME_VERSION = 33;
 
-function getExtensionId() {
+export function getExtensionId() {
     return chrome.runtime.id;
 }
 
-var getURL = function(path){
+export function getURL(path){
     path = path ? path : '';
     return chrome.extension.getURL(path);
 };
 
 /** @constructor */
-function ExtensionHelper() {
+export function ExtensionHelper() {
     this.tabs = chrome.tabs;
     this.getURL = getURL;
     this.runPopupActions = function() {return;};
-    
+
     this.isPopup = function(callback) {
         chrome.tabs.getCurrent(function(tab) {
             callback(!tab);
         });
     };
-    
+
 
     this.setLocation = function(path){
         window.location = '/html/' + path;
     };
-    
+
     this.copyFromInput = function($element, callback) {
         $element.select();
         document.execCommand('copy');
-        
+
         if (typeof(callback) !== 'undefined') {
             callback();
         }
@@ -74,7 +74,7 @@ function ExtensionHelper() {
 }
 
 /** @constructor */
-function ContentHelper() {
+export function ContentHelper() {
     this.getURL = getURL;
     var that = this;
     this.redirectTo = function(url) {
@@ -84,12 +84,12 @@ function ContentHelper() {
     this.createTab = function(url) {
         that.background.createTab({url: url});
     };
-    
+
     this.bindClient = function(client){
         chrome.extension.onMessage.addListener(function(message, sender, sendResponse){
             client.processIncoming(message);
         });
-        
+
         client.addSender('background', function(message){
             chrome.extension.sendMessage(message);
         });

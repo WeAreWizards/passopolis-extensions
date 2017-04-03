@@ -31,6 +31,8 @@ import { assertIsNumber, dictValues } from "../../../common/utils";
 import * as kew from "../../../../api/js/cli/kew";
 import { background } from "./background-init";
 import * as org_info from "./org-info";
+import * as background_api from "../../../common/background_api";
+
 
 /**
 @constructor
@@ -294,7 +296,7 @@ var callBackgroundAsPromise = function(instance, method, varArgs) {
 
 /** @return {!kew.Promise.<!mitro.UsersGroupsSecrets>}} */
 function listUsersGroupsAndSecretsWithPromise() {
-  return callBackgroundAsPromise(background, background.listUsersGroupsAndSecrets);
+  return callBackgroundAsPromise(background, background_api.listUsersGroupsAndSecrets);
 };
 
 /** @return {!kew.Promise.<!mitro.OrganizationInfo>} */
@@ -306,7 +308,7 @@ function getOrganizationInfoWithPromise() {
 @param {number} organizationId
 */
 function getOrganizationWithPromise(organizationId) {
-  return callBackgroundAsPromise(background, background.getOrganization, organizationId);
+  return callBackgroundAsPromise(background, background_api.getOrganization, organizationId);
 };
 
 /** Loads UserData from the background using a Promise.
@@ -372,7 +374,7 @@ ListMySecretsAndGroups doesn't return groupMap, needed to display the secret ACL
 @return {!kew.Promise} */
 export function getCompleteSecretPromise(secretId: number) {
   assertIsNumber(secretId);
-  return callBackgroundAsPromise(background, background.getSiteData, secretId);
+  return callBackgroundAsPromise(background, background_api.getSiteData, secretId);
 };
 
 /** Load user data for a secret.

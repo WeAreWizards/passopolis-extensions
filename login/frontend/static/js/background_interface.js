@@ -24,9 +24,6 @@
  * *****************************************************************************
  */
 
-// Closure compiler definition of the background type
-/** @suppress{duplicate} */
-var mitro = mitro || {};
 
 /**
 @constructor

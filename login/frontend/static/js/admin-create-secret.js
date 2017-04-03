@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -25,43 +26,47 @@
  */
 
 
-$(function() {
-  // TODO: this should probably be a chooser.
-  mitro.loadOrganizationInfo(function (orgInfo) {
-      var selOrgInfo = orgInfo.getSelectedOrganization();
-      if (selOrgInfo) {
-          $('#secret-org-id').text(selOrgInfo.id.toString());
-      }
+import { loadOrganizationInfo } from "./org-info";
+import { onBackgroundError } from "./admin-common";
+import {$, jQuery} from "../../../../node_modules/jquery/dist/jquery";
+import { getSecretDataFromPage } from "./admin-secret-common";
+import { helper } from "./background-init";
+import * as background_api from "../../../common/background_api";
+
+loadOrganizationInfo(function (orgInfo) {
+  var selOrgInfo = orgInfo.getSelectedOrganization();
+  if (selOrgInfo) {
+    $('#secret-org-id').text(selOrgInfo.id.toString());
+  }
+}, onBackgroundError);
+
+
+$('#is-secure-note').click(function() {
+  $('.for-manual').hide();
+  $('.for-note').show();
+});
+$('#is-web-password').click(function() {
+  $('.for-manual').show();
+  $('.for-note').hide();
+});
+
+$('#save-secret-button').click(function() {
+  $('.content').hide();
+  $('.ugly-message').text('Saving data ...');
+  $('.ugly-message').show();
+
+  var dataFromPage = getSecretDataFromPage();
+  background_api.addSecret({}, dataFromPage.clientData, dataFromPage.secretData, function(secretId) {
+    var onSuccess = function() {
+      helper.setLocation('admin-manage-secret.html?secretId=' + secretId);
+    };
+
+    // right now: orgId is always null because the create page doesn't have an org selector
+    // TODO: Add an org selector? Once done, this should actually work
+    if (dataFromPage.orgId) {
+      background_api.editSiteShares(secretId, [], [], dataFromPage.orgId, onSuccess, onBackgroundError);
+    } else {
+      onSuccess();
+    }
   }, onBackgroundError);
-
-  $('#is-secure-note').click(function() {
-    $('.for-manual').hide();
-    $('.for-note').show();
-  });
-  $('#is-web-password').click(function() {
-    $('.for-manual').show();
-    $('.for-note').hide();
-  });
-
-  
-  $('#save-secret-button').click(function() {
-    $('.content').hide();
-    $('.ugly-message').text('Saving data ...');
-    $('.ugly-message').show();
-
-    var dataFromPage = getSecretDataFromPage();
-    background.addSecret({}, dataFromPage.clientData, dataFromPage.secretData, function(secretId) {
-      var onSuccess = function() {
-        helper.setLocation('admin-manage-secret.html?secretId=' + secretId);
-      };
-
-      // right now: orgId is always null because the create page doesn't have an org selector
-      // TODO: Add an org selector? Once done, this should actually work
-      if (dataFromPage.orgId) {
-        background.editSiteShares(secretId, [], [], dataFromPage.orgId, onSuccess, onBackgroundError);
-      } else {
-        onSuccess();
-      }
-    }, onBackgroundError);
-  });
 });
