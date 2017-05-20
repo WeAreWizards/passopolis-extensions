@@ -4,7 +4,7 @@
   "description": "Mitro javascript cli dependencies only used for nix test suites",
   "author": "Passopolis <team@passopolis.com>",
   "dependencies": {
-    "hogan": "^1.0.2",
+    "hogan.js": "^3.0.2",
     "jasmine-node": "*",
     "webworker-threads": "*"
   }

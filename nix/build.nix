@@ -3,7 +3,7 @@ with nixpkgs;
 let
   keyzcar_src = fetchzip {
         url = https://github.com/mitro-co/keyczarjs/archive/master.zip;
-        sha256 = "0hcxiqpyvs504qd0ars658c1v4hxj87dg48xij28rvyixk634bvi";
+        sha256 = "17kkdmfhkasgw9l7081y0qm4bn9sf8gipx9dm9zpfyyjsi8j8n7c";
       };
   forge_src = fetchzip {
       url = https://github.com/digitalbazaar/forge/archive/0.3.0.zip;
@@ -79,18 +79,28 @@ let
     cp -r . $out/
     '';
   };
+
+  node_packages = import "${nixpkgs.path}/pkgs/top-level/node-packages.nix" {
+    pkgs = nixpkgs;
+    inherit (nixpkgs) stdenv nodejs fetchurl fetchgit;
+    neededNatives = [ nixpkgs.python ] ++ nixpkgs.lib.optional nixpkgs.stdenv.isLinux nixpkgs.utillinux;
+    self = node_packages;
+    generated = ../package.nix;
+  };
 in
 rec {
   chrome-extension = callPackage ./chrome-extension.nix {
     inherit forge_src;
     inherit keyzcar_src;
     inherit chrome-config;
+    inherit node_packages;
   };
 
   firefox-44-extension = callPackage ./firefox-44-extension.nix {
     inherit forge_src;
     inherit keyzcar_src;
     inherit firefox-44-config;
+    inherit node_packages;
     manifest = firefox-44-manifest;
   };
 
