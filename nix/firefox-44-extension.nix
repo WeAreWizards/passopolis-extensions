@@ -1,4 +1,4 @@
-{ stdenv, closurecompiler, p7zip, unzip, nodejs, python, lessc, zip, forge_src, keyzcar_src, firefox-44-config, manifest }:
+{ stdenv, closurecompiler, p7zip, unzip, nodejs, python, lessc, zip, forge_src, keyzcar_src, firefox-44-config, manifest, node_packages }:
 stdenv.mkDerivation {
     name = "passopolis-firefox-44-extension";
     buildInputs = [
@@ -9,6 +9,8 @@ stdenv.mkDerivation {
       lessc
       zip
       p7zip
+      node_packages.hogan
+      node_packages."hogan.js"
     ];
     srcs = ../../extensions;
 
@@ -50,11 +52,11 @@ stdenv.mkDerivation {
 
     mkdir -p ext/html/
     for t in $(find frontend/templates/*mustache); do
-        NODE_PATH=../node_modules/hogan/node_modules/ node ./mustache_renderer.js $t ext/html/$(basename $t .mustache).html
+        node ./mustache_renderer.js $t ext/html/$(basename $t .mustache).html
     done
 
     for t in $(find frontend/partials/*mustache); do
-        ../node_modules/.bin/hulk $t > ext/js/$(basename $t .mustache).js
+        hulk $t > ext/js/$(basename $t .mustache).js
     done
 
     # Remove tests
