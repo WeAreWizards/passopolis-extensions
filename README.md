@@ -1,7 +1,7 @@
 # Welcome
 
 This is the continuation of the excellent Mitro password manager under
-a new brand (https://passopolis.com/).
+a new brand. For more basic information see our website https://passopolis.com.
 
 We split out the extensions into their own repository (this) for
 easier development.
@@ -35,6 +35,8 @@ Activate nix shell
 (your might want to add this to your profile)
 
 # Building & testing the extension for Firefox
+
+You need the [developer edition of Firefox](https://www.mozilla.org/de/firefox/developer/) for loading such unsigned extensions.
 
 ```
 cd extensions
