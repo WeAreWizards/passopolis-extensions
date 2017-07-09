@@ -38,7 +38,7 @@ Activate nix shell
 
 ```
 cd extensions
-nix-build nix/build.nix -A firefox-44-extension && chmod a+w /tmp/pe.xpi && cp -r result/pe.xpi /tmp/pe.xpi
+nix-build nix/build.nix -A firefox-44-extension && cp result/pe.xpi /tmp/pe.xpi
 ```
 Use addon-debugging "load temporary addon", then hit reload after each rebuild.
 
