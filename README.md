@@ -11,12 +11,35 @@ current form. We have a hacked-together shell script that copies a few
 files around and then packs the extension which we will release when
 it's a bit less ugly.
 
+# Cloning the repository
+
+We assume that you create a folder `passopolis` and clone this repository to a subfolder called `extensions`. This is currently assumend at various places, so it makes sense to follow these steps (pull requests for more flexibility are welcome)
+
+    mkdir passopolis
+    git clone https://github.com/WeAreWizards/passopolis-extensions.git extensions
+     
+# NixOs
+
+We use NixOs for building clean packages.
+
+## Quickstart
+
+Installing
+
+    bash <(curl https://nixos.org/nix/install)
+
+Activate nix shell
+
+    . ~/.nix-profile/etc/profile.d/nix.sh
+
+(your might want to add this to your profile)
+
 # Building & testing the extension for Firefox
 
 ```
-$ nix-build extensions/build.nix -A firefox-44-extension && chmod a+w /tmp/pe.xpi && cp -r result/pe.xpi /tmp/pe.xpi
+cd extensions
+nix-build nix/build.nix -A firefox-44-extension && chmod a+w /tmp/pe.xpi && cp -r result/pe.xpi /tmp/pe.xpi
 ```
-
 Use addon-debugging "load temporary addon", then hit reload after each rebuild.
 
 # Branding
