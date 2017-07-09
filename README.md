@@ -34,7 +34,9 @@ Activate nix shell
 
 (your might want to add this to your profile)
 
-# Building & testing the extension for Firefox
+# Building & testing the extension
+
+## Firefox
 
 You need the [developer edition of Firefox](https://www.mozilla.org/de/firefox/developer/) for loading such unsigned extensions.
 
@@ -43,6 +45,13 @@ cd extensions
 nix-build nix/build.nix -A firefox-44-extension && cp result/pe.xpi /tmp/pe.xpi
 ```
 Use addon-debugging "load temporary addon", then hit reload after each rebuild.
+
+## Chrome
+
+    cd extensions
+    nix-build nix/build.nix -A chrome-extension && mkdir -p /tmp/passopolis-chrome && rsync -a result/ /tmp/passopolis-chrome/
+
+Open the path /tmp/passopolis-chrome in chrome after enabling developer options via "open unpacked extension"
 
 # Branding
 
