@@ -57,6 +57,7 @@ export const makeCircularBuffer = function(size: number) {
       var output = '';
       for (var i = 0; i < outputArray.length; i++) {
         // don't modify the actual data in the buffer
+        // $FlowFixMe
         var rowArrayCopy = outputArray[i].slice();
         for (var j = 0; j < rowArrayCopy.length; j++) {
           var element = rowArrayCopy[j];
@@ -87,8 +88,10 @@ export const makeCircularBuffer = function(size: number) {
 export const logBuffer = makeCircularBuffer(500);
 const oldLog = console.log;
 export const captureLogsToBuffer = function() {
+  // $FlowFixMe
   console.log = logBuffer.push;
 };
 export const stopCapturingLogsToBuffer = function() {
+  // $FlowFixMe
   console.log = oldLog;
 };

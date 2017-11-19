@@ -10,7 +10,7 @@
     "hogan": "^1.0.2",
     "jasmine-node": "*",
     "jquery": "^3.2.1",
-    "keyczarjs": "^0.1.0",
-    "webworker-threads": "*"
+    "jquery-ui-dist": "1.12.1",
+    "keyczarjs": "^0.1.0"
   }
 }

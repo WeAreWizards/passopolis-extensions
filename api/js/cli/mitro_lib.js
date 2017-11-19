@@ -27,11 +27,12 @@
 
 import { assert } from "./assert";
 import * as lru_cache from "./lru_cache";
-import { keycache } from "./keycache";
 import * as crypto from "./crypto";
 import * as rpc from "./rpc";
 import * as config from "../../../login/chrome/config/config";
 import { getExtensionId } from "../../../login/common/worker";
+import * as KeyCache from "./keycache.js";
+import { GroupInfo, AuditAction } from "../../../login/frontend/static/js/background_interface";
 
 const globalDecryptionCache = new lru_cache.LRUCache(1024);
 const txnSpecificCaches = {};
@@ -668,20 +669,6 @@ var RemoveMember = clearCacheAndCall(function(args, onSuccess: OnSuccess, onErro
   }, onSuccess, onError);
 });
 
-type GroupInfo = {
-  groupId: number,
-  autoDelete: boolean,
-  name: string,
-  encryptedPrivateKey: string,
-  isOrgPrivateGroup: boolean,
-  isNonOrgPrivateGroup: boolean,
-  owningOrgId: number,
-  owningOrgName: string,
-  users: Array<string>,
-  isTopLevelOrg: boolean,
-  isRequestorAnOrgAdmin: boolean,
-};
-type AuditAction = {};
 
 // TODO(tom): move to RPC module
 type Secret = {
@@ -771,6 +758,7 @@ var AddSecrets = clearCacheAndCall(function(args, data, onSuccess: OnSuccess, on
           //Used to prevent creating a function within a loop
           var messageFunction = function(response, onSuccess: OnSuccess, onError: OnError){
             for (var j = 2; j < toRun.length; j++) {
+              // $FlowFixMe
               toRun[j][1][0].secretId = response.secretId;
             }
             onSuccess();
@@ -986,7 +974,7 @@ var runCommand = function(cmdFcn: any, argv: Object, onSuccess: OnSuccess, onErr
     onSuccess = onSuccess || rpc.DefaultResponseHandler;
     onError = onError || rpc.DefaultErrorHandler;
 
-    argv._keyCache = argv._keyCache || keycache.MakeKeyCache();
+    argv._keyCache = argv._keyCache || KeyCache.MakeKeyCache();
     if (cmdFcn) {
       if (cmdFcn !== AddIdentity && cmdFcn !== GetPrivateKey) {
         // get the current user's private key and pass it along.

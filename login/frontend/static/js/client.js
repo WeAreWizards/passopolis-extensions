@@ -33,18 +33,15 @@ import { helper } from "./background-init";
  * The resulting string contains capital letters,
  * small letters and numbers
  *
- * @param length {integer} the desired string length
- *
  * TODO: move this function to the utils
  */
-var randomString = function(length) {
-    var text = "";
-    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const randomString = function(length: number) {
+    let text = "";
+    let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-    for(var i=0; i<length; i++) {
+    for(let i=0; i < length; i++) {
         text += possible.charAt(Math.floor(Math.random() * possible.length));
     }
-
     return text;
 };
 
@@ -166,7 +163,7 @@ Client.prototype.settings = {};
  * @param {!Object} data the response data
  * @returns {!Object} the recomposed response message
  */
-Client.prototype.composeResponse = function(message, data) {
+Client.prototype.composeResponse = function(message: Object, data: Object) {
     message.response = true;
 
     // interchanging the sender and the receiver addresses

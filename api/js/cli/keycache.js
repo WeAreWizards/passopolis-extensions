@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -24,44 +25,29 @@
  * *****************************************************************************
  */
 
-/** @suppress{duplicate} */
-// var forge = forge || require('node-forge');  TODO FIX
-/** @suppress{duplicate} */
-var mitro = mitro || {};
-
-// Cache for crypto keys. Includes code to fill it in the background.
-(function() {
-"use strict";
-mitro.keycache = {};
-
-  var _Worker = null;
-
-// define window.mitro.keycache for the browser
-if(typeof(window) !== 'undefined') {
-  _Worker = (typeof(unsafeWindow) !== 'undefined') ? unsafeWindow.Worker : Worker;
-}
+import * as crypto from "./crypto";
+import * as forge from "../../../node_modules/node-forge/js/forge";
+import * as background_api from "../../../login/common/background_api";
 
 // ideally keep the cache fill with this many keys
-mitro.keycache.CACHE_TARGET = 2;
+const CACHE_TARGET = 2;
 
-// TODO: Define this in one place; maybe here and not in mitro_lib?
-var crypto = mitro.crypto;
-mitro.keycache.useCrappyCrypto = function() {
-  if (!mitro.crappycrypto) {
-    throw new Error('crappycrypto does not exist?');
+type Cache = {
+  push: (key: string) => void;
+  setPopListener: (listener: any) => void;
+  size: () => number;
+  getNewRSAKeysAsync: (numKeys: number, onSuccess: any, onError: any) => void;
   }
-  crypto = mitro.crappycrypto;
-};
 
-
-mitro.keycache.MakeKeyCache = function() {
+// TODO(tom): migrate to class
+export const MakeKeyCache = function(): Cache {
   var keys = [];
   var pushListener = null;
   var popListener = null;
-  var keyLimit = mitro.keycache.CACHE_TARGET;
+  var keyLimit = CACHE_TARGET;
   var keyLimitReachedCallback = null;
 
-  var cache = {
+  var cache: any = {
     size: function() {
       return keys.length;
     },
@@ -74,7 +60,7 @@ mitro.keycache.MakeKeyCache = function() {
           keyLimitReachedCallback();
           keyLimitReachedCallback = null;
         }
-        keyLimit = mitro.keycache.CACHE_TARGET;
+        keyLimit = CACHE_TARGET;
       }
       if (pushListener !== null) {
         pushListener(cache);
@@ -131,11 +117,10 @@ mitro.keycache.MakeKeyCache = function() {
       keyLimit = count;
       keyLimitReachedCallback = onSuccess;
       for (var i = cache.size(); i < count; ++i) {
-        popListener();
+        if (popListener !== null) popListener(cache);
       }
     }
   };
-
 
   cache.getNewRSAKeysAsync = function(numKeys, onSuccess, onError) {
     try {
@@ -163,27 +148,26 @@ mitro.keycache.MakeKeyCache = function() {
 
 /** Returns a string with random bytes from forge.random.getBytesSync. */
 // TODO: Remove this
-mitro.keycache.getEntropyBytes = function(numBytes) {
+export const getEntropyBytes = function(numBytes: number) {
   return forge.random.seedFileSync(numBytes);
 };
 
-
-
-mitro.keycache.startFiller = function(cache) {
+export const startFiller = function(cache: Cache) {
   // start a worker: get it to fill the cache
-  var background_worker = new _Worker('keycache_webworker.js');
-
-  var type = 'keyczar';
-  if (crypto == mitro.crappycrypto) {
-    type = 'crappy';
-  }
+  const background_worker = new Worker('keycache_webworker.js');
+  const type = 'keyczar';
 
   var hasStrongRandom = (type != 'crappy' && typeof window != 'undefined' &&
       window.crypto && window.crypto.getRandomValues);
 
-  background_worker.addEventListener('message', function(e) {
+
+  background_worker.onmessage = function(e: MessageEvent) {
+    if (!e.data || typeof e.data !== "object") {
+      return;
+    }
     if (e.data.key) {
       console.log('got key from worker');
+      // $FlowFixMe
       var k = crypto.loadFromJson(e.data.key);
       cache.push(k);
     } else if (e.data.request == 'log') {
@@ -193,14 +177,14 @@ mitro.keycache.startFiller = function(cache) {
     } else {
       console.log('unhandled worker message', e.data);
     }
-  });
+  }
 
   var postGenerateKey = function() {
-    var request = {request: 'generate'};
+    var request: any = {request: 'generate'};
     if (hasStrongRandom) {
       // each time we generate a key, add some additional entropy from the browser
       // TODO: Is this a sufficient amount?
-      request.seed = mitro.keycache.getEntropyBytes(32);
+      request.seed = getEntropyBytes(32);
     }
     background_worker.postMessage(request);
   };
@@ -217,13 +201,13 @@ mitro.keycache.startFiller = function(cache) {
   if (hasStrongRandom) {
     // seed the random number generator with good entropy, if we have it
     // 32 pools that each want 32 bytes of entropy
-    var seed = mitro.keycache.getEntropyBytes(32 * 32);
+    var seed = getEntropyBytes(32 * 32);
     background_worker.postMessage({request: 'seed', seed: seed});
   }
 
   // Post one message to the background for each key
   var count = cache.size();
-  while (count < mitro.keycache.CACHE_TARGET) {
+  while (count < CACHE_TARGET) {
     postGenerateKey();
     count += 1;
   }
@@ -234,6 +218,3 @@ mitro.keycache.startFiller = function(cache) {
     }
   };
 };
-
-
-})();

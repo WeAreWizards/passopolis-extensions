@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -23,143 +24,71 @@
  *     You can contact the authors at inbound@mitro.co.
  * *****************************************************************************
  */
+declare var CHROME: boolean;
+declare var FIREFOX: boolean;
+declare var WEBPAGE: boolean;
+declare var SAFARI: boolean;
 
-/** @suppress{duplicate} */
-var mitro = mitro || {};
-(function() {
-  mitro.rpc = {};
-  var PLATFORM = 'unknown';
-  if(typeof(window) !== 'undefined') {
-    try {
-      if (CHROME) {
-        PLATFORM = 'CHROME';
-      } else if (SAFARI) {
-        PLATFORM = 'SAFARI';
-      } else if (FIREFOX) {
-        PLATFORM = 'FIREFOX';
-      } else if (WEBPAGE) {
-        PLATFORM = 'WEBPAGE';
-      }
-    } catch (e) {
+import { helper } from "../../../login/frontend/static/js/background-init";
+
+let PLATFORM = 'unknown';
+if(typeof(window) !== 'undefined') {
+  try {
+    if (CHROME) {
+      PLATFORM = 'CHROME';
+    } else if (SAFARI) {
+      PLATFORM = 'SAFARI';
+    } else if (FIREFOX) {
+      PLATFORM = 'FIREFOX';
+    } else if (WEBPAGE) {
+      PLATFORM = 'WEBPAGE';
     }
+  } catch (e) {
+  }
+}
 
-    //////////////////////////////////////////////////////////////////////////
-    //   Code below here is only for the browser
-    //////////////////////////////////////////////////////////////////////////
-    mitro.rpc._PostToMitro = function(outdict, args, path, onSuccess, onError) {
-      var url = 'https://' + args.server_host + ':' + args.server_port + path;
-      outdict.clientIdentifier = helper.getClientIdentifier();
-      outdict.platform = PLATFORM;
-      
-      var requestString = JSON.stringify(outdict);
-      helper.ajax({
-        type: 'POST',
-        url: url,
-        data: requestString,
-        dataType: 'json',
-        complete: function (response) {
-          try {
-            var rval = JSON.parse(response.text);
-            rval.status = response.status;
-            if(response.status === 200){
-              onSuccess(rval);
-            } else {
-              onError(rval);
-            }
-          } catch(e) {
-            onError({
-              status : response.status,
-              userVisibleError: 'Unknown error',
-              exceptionType: 'UnknownException'
-            });
-          }
+// TODO(tom): find good place for this
+type Args = {
+  server_host: string;
+  server_port: number;
+}
+
+export const _PostToMitro = function(outdict: Object, args: Args, path: string, onSuccess: any, onError: any) {
+  var url = 'https://' + args.server_host + ':' + args.server_port + path;
+  outdict.clientIdentifier = helper.getClientIdentifier();
+  outdict.platform = PLATFORM;
+
+  var requestString = JSON.stringify(outdict);
+  helper.ajax({
+    type: 'POST',
+    url: url,
+    data: requestString,
+    dataType: 'json',
+    complete: function (response) {
+      try {
+        var rval = JSON.parse(response.text);
+        rval.status = response.status;
+        if(response.status === 200){
+          onSuccess(rval);
+        } else {
+          onError(rval);
         }
-      });
-    };
-  }
-  ////////////////////////////////////////////////////////////////////////////
-  //   Code below here is only for the node.js implementation
-  ////////////////////////////////////////////////////////////////////////////
-  else if(typeof(module) !== 'undefined' && module.exports) {
-    var https = require('https');
-    module.exports = mitro.rpc;
-
-    var _certificateValidation = true;
-
-    // Setting this to false allows connecting to a self-signed SSL certificate
-    // Should only be used for testing!
-    mitro.rpc.setCertificateValidationForTest = function(value) {
-      _certificateValidation = Boolean(value);
-    };
-
-    mitro.rpc._PostToMitro = function(outdict, args, path, onSuccess, onError) {
-      onSuccess = onSuccess || mitro.rpc.DefaultResponseHandler;
-      onError = onError || mitro.rpc.DefaultErrorHandler;
-
-      var requestString = JSON.stringify(outdict);
-      var headers = {
-        'Content-Type': 'application/json',
-        'Content-Length': requestString.length
-      };
-
-      var options = {
-        host: args.server_host,
-        port: args.server_port,
-        path: path,
-        method: 'POST',
-        headers: headers,
-
-        // validate TLS certificates: (default; specify it just in case)
-        rejectUnauthorized: true
-      };
-
-      if (!_certificateValidation) {
-        // disable certificate validation for testing with self-signed certificate
-        options.agent = false;
-        options.rejectUnauthorized = false;
+      } catch(e) {
+        onError({
+          status : response.status,
+          userVisibleError: 'Unknown error',
+          exceptionType: 'UnknownException'
+        });
       }
+    }
+  });
+};
 
-      var req = https.request(options, function(res) {
-        res.setEncoding('utf-8');
+export const DefaultResponseHandler = function(data: Object) {
+  console.log(JSON.stringify(data, null, 4));
+};
 
-        var responseString = '';
-
-        res.on('data', function(data) {
-          responseString += data;
-        });
-
-        res.on('end', function() {
-          console.log("status: " + res.statusCode);
-          if (200 === res.statusCode) {
-            onSuccess(JSON.parse(responseString));
-          } else {
-            var dict = {'status' : res.statusCode};
-            try {
-              dict = JSON.parse(responseString);
-            } finally {
-              console.log('rpc error: ', responseString);
-              onError(dict);
-            }
-          }
-        });
-      });
-
-      req.on('error', function(e) {
-        console.log('rpc.js: RPC error');
-        onError({'status' : -1});
-      });
-      req.write(requestString);
-      req.end();
-    };
-
-    mitro.rpc.DefaultResponseHandler = function(data) {
-      console.log(JSON.stringify(data, null, 4));
-    };
-
-    mitro.rpc.DefaultErrorHandler = function(data) {
-      console.log(JSON.stringify(data, null, 4));
-      throw new Error('RPC error: ' + data);
-    };
-  }
-
-})();
+export const DefaultErrorHandler = function(data: Object) {
+  console.log(JSON.stringify(data, null, 4));
+  throw new Error('RPC error: ' + data.toString());
+};

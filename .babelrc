@@ -1,6 +1,9 @@
 {
   "plugins": [
     "transform-flow-strip-types",
-    "transform-es2015-modules-amd",
+    "transform-es2015-modules-amd"
+  ],
+  "ignore": [
+    "./login/frontend/static/js/bad_password_bloom_data.js"
   ]
 }

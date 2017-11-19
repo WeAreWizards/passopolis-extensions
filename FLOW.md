@@ -14,3 +14,8 @@ feature changes.
 
 This is best done by adding a `// @flow` line to the beginning of a
 file, followed by fixing the resulting fallout of the `flow` command.
+
+# random
+
+* mark external libraries with TODO and EXTERNAL
+* `nix-shell -p python2 --command "yarn install"`

@@ -36,10 +36,22 @@ const background: Client = new Client('extension');
 helper.bindClient(background);
 background.initApiCalls();
 background.initRemoteCalls('background', [
-  'hidePopup', 'mitroSignup', 'saveSettingsAsync', 'loadSettingsAsync', 'mitroLogin',
-  'createTab', 'setPopupHeight', 'checkTwoFactor', 'changePassword',
-  'getSelectedTab', 'getServiceInstances', 'generatePassword',
-  'getPendingGroupDiffs', 'commitPendingGroupDiffs', 'pregenerateKeys', 'getSiteData',
+  'hidePopup',
+  'mitroSignup',
+  'saveSettingsAsync',
+  'loadSettingsAsync',
+  'mitroLogin',
+  'createTab',
+  'setPopupHeight',
+  'checkTwoFactor',
+  'changePassword',
+  'getSelectedTab',
+  'getServiceInstances',
+  'generatePassword',
+  'getPendingGroupDiffs',
+  'commitPendingGroupDiffs',
+  'pregenerateKeys',
+  'getSiteData',
 ]);
 
 export { background, helper };

@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -24,8 +25,14 @@
  * *****************************************************************************
  */
 
-var keycache = mitro.keycache.MakeKeyCache();
-mitro.keycache.startFiller(keycache);
+import * as KeyCache from "../../api/js/cli/keycache";
+import { Client } from "../../api/js/cli/mitroclient";
+import * as forge from "../../node_modules/node-forge/js/forge";
+import {$, jQuery} from "../../node_modules/jquery/dist/jquery";
+import * as WorkerMod from "../../login/common/worker";
+
+var keycache = KeyCache.MakeKeyCache();
+KeyCache.startFiller(keycache);
 
 var getNewRSAKeysAsync = function(numKeys, onSuccess, onError) {
     keycache.getNewRSAKeysAsync(numKeys, function(keys) {
@@ -51,12 +58,9 @@ var getRandomness = function(onSuccess, onError) {
 };
 
 var client = new Client('background');
+var worker = new Worker('worker.js');
 
-// we have to use unsafeWindow in firefox
-var _Worker = typeof(unsafeWindow) !== 'undefined' ? unsafeWindow.Worker : Worker;
-
-var worker = new _Worker('worker.js');
-worker.addEventListener('message', function(event) {
+worker.onmessage = function(event: MessageEvent) {
     // make a deep copy of message
     var message = jQuery.extend(true, {}, event.data);
 
@@ -65,24 +69,46 @@ worker.addEventListener('message', function(event) {
         worker.postMessage(new_message);
     };
     client.processIncoming(message);
-});
+}
+
 client.addSender('worker', function(message){
     worker.postMessage(message);
 });
 
 var ajax = mitro.rpc._PostToMitro;
 
-
 client.initRemoteCalls('worker', [
     'signMessageAsync',
-    'setExtensionId', 'setFailover', 'setDeviceId', 'getDeviceId', 'getDeviceIdAsync',
-    'workerInvokeOnIdentity', 'createIdentity', 'workerCreateIdentity', 'workerLogin', 'workerLoginWithToken',
-    'workerLoginWithTokenAndLocalKey', 'login', 'loginWithToken', 'loginWithTokenAndLocalKey', 'addIssue', 'initCacheFromFile',
-    'initCacheFromJson', 'clearCaches', 'bidirectionalSetDiff', 'workerLogout'
-    ]);
+    'setExtensionId',
+    'setFailover',
+    'setDeviceId',
+    'getDeviceId',
+    'getDeviceIdAsync',
+    'workerInvokeOnIdentity',
+    'createIdentity',
+    'workerCreateIdentity',
+    'workerLogin',
+    'workerLoginWithToken',
+    'workerLoginWithTokenAndLocalKey',
+    'login',
+    'loginWithToken',
+    'loginWithTokenAndLocalKey',
+    'addIssue',
+    'initCacheFromFile',
+    'initCacheFromJson',
+    'clearCaches',
+    'bidirectionalSetDiff',
+    'workerLogout',
+]);
 
-client.initRemoteExecution('worker', ['getNewRSAKeysAsync', 'console_log', 'ajax', 'getRandomness'], this);
-client.setExtensionId(getExtensionId());
+client.initRemoteExecution('worker', [
+    'getNewRSAKeysAsync',
+    'console_log',
+    'ajax',
+    'getRandomness',
+], this);
+
+client.setExtensionId(Worker.getExtensionId());
 
 // try to catch loading things in the incorrect order
 assert(mitro.fe);
@@ -153,15 +179,8 @@ var getLoginToken = function(email, callback) {
     var key = 'loginToken:' + email;
     helper.storage.local.get(key, function(r) {
         var token = r;
-
         try {
-            if (CHROME && chrome.runtime.lastError) {
-                // TODO(ivan): safari and ff implementation
-                console.log('local storage error', chrome.runtime.lastError.message);
-            } else {
-                token = JSON.parse(r[key]);
-                console.log("got login token for user " + email);
-            }
+            console.log('local storage error', chrome.runtime.lastError.message);
         } catch (e) {
             console.log('problem getting key', (e.stack ? e.stack : ''));
         } finally {

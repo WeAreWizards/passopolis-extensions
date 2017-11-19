@@ -26,6 +26,8 @@
 
 // Original source: https://github.com/Obvious/kew
 // License: MIT
+// Now: https://github.com/Medium/kew
+// TODO(tom): EXTERNAL library
 
 // Export all variables in the kew namespace in the browser
 var kew = kew || {};
@@ -567,7 +569,7 @@ kew.all = function(promises) {
   var promise = new kew.Promise();
   var counter = promises.length;
 
-  /*The below functions have been pulled out of the for loop to prevent 
+  /*The below functions have been pulled out of the for loop to prevent
   function creation in a loop*/
   var decrement = function decrementAllCounter() {
     counter--;
@@ -624,7 +626,7 @@ function allSettled(promises) {
   var resolution = function(){
     if ((--counter) === 0) promise.resolve(outputs);
   };
-  
+
   for (var i = 0; i < promises.length; i += 1) {
     if (!promises[i] || !isPromiseLike(promises[i])) {
       replaceElFulfilled(outputs, i, promises[i]);

@@ -9,11 +9,14 @@ stdenv.mkDerivation {
       lessc
       zip
     ];
-    srcs = ../../extensions;
+    srcs = ./..;
 
     phases = "unpackPhase buildPhase";
     buildPhase = ''
-    cd login/
+    node_modules/.bin/babel login/ --out-dir build/login
+    node_modules/.bin/babel api/js --out-dir build/api/js
+
+    cd build/login/
 
     mkdir -p ext/js
 
@@ -38,6 +41,10 @@ stdenv.mkDerivation {
     cp -r ./frontend/static/fonts/ ext/fonts
     cp -r ./frontend/static/img/ ext/img
     cp -r ./frontend/static/js/* ext/js
+
+    # external librarys TODO(tom): mark EXTERNAL for firefox package:
+    cp ./node_modules/jquery-ui-dist/jquery-ui.min.css ext/css
+    cp ./node_modules/jquery-ui-dist/jquery-ui.min.js ext/js
 
     lessc --strict-imports --strict-math=on --strict-units=on ./frontend/static/less/site.less > ext/css/site.css
     lessc --strict-imports --strict-math=on --strict-units=on ./frontend/static/less/mitro_popup2.less > ext/css/mitro_popup2.css
