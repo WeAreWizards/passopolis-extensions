@@ -24,8 +24,6 @@
  * *****************************************************************************
  */
 
-//#!/usr/bin/env node
-
 //var optimist = require('optimist');
 //var assert = require('assert');
 //var lib = require('./mitro_lib.js');

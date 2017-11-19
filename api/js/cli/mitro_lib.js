@@ -76,7 +76,7 @@ function postEndTransaction(transactionSpecificData: TransactionSpecificData) {
 };
 
 var clearCacheAndCall = function(f: any) {
-  return function() {
+  return function(...rest: any) {
     console.log('mitro_lib: clearing global cache');
     delete txnSpecificCaches[GENERAL_TRANSACTION];
     f.apply(null, Array.prototype.slice.call(arguments));
@@ -90,7 +90,7 @@ function PostToMitro(outdict: Object, args: Object, path: string, onSuccess: any
   // include the device id in the signed portion of the request
   outdict.deviceId = args.deviceId;
 
-  var message: any = {
+  const message: any = {
     'identity': args.uid,
     'request': JSON.stringify(outdict)
   };
@@ -366,12 +366,10 @@ var decryptSecretWithKeyString = function(secret, keyString, privateKeyObject) {
   return secret;
 };
 
-type Secret = Object // TODO(tom)
-
-function decryptSecretWithGroups(secret: Secret, groups: Array<number>, previousUnencryptedKey) {
+function decryptSecretWithGroups(secret: SecretToPath, groups: Array<GroupInfo>, previousUnencryptedKey) {
   assert(secret);
   var path = secret.groupIdPath;
-  for (var pathId in path) {
+  for (let pathId of path) {
     var groupId = path[pathId];
     if (!groups[groupId]) {
       console.log("ERROR: could not get group info for (group)", groupId);
@@ -522,7 +520,8 @@ function GetOrganizationState(args: Object, postArgs: Object, onSuccess: OnSucce
 
 // mutationFunction MUST RETURN TRUE if secrets are to be re-encrypted with
 // a new key
-var MutateMembership = clearCacheAndCall(function(args, mutationFunction, onSuccess: OnSuccess, onError: OnError) {
+const MutateMembership = clearCacheAndCall(
+  function(args, mutationFunction, onSuccess: OnSuccess, onError: OnError) {
   try {
     args.orgId = parseInt(args.orgId, 10);
     assert(onSuccess);
@@ -669,6 +668,60 @@ var RemoveMember = clearCacheAndCall(function(args, onSuccess: OnSuccess, onErro
   }, onSuccess, onError);
 });
 
+type GroupInfo = {
+  groupId: number,
+  autoDelete: boolean,
+  name: string,
+  encryptedPrivateKey: string,
+  isOrgPrivateGroup: boolean,
+  isNonOrgPrivateGroup: boolean,
+  owningOrgId: number,
+  owningOrgName: string,
+  users: Array<string>,
+  isTopLevelOrg: boolean,
+  isRequestorAnOrgAdmin: boolean,
+};
+type AuditAction = {};
+
+// TODO(tom): move to RPC module
+type Secret = {
+  secretId: number,
+  hostname: string,
+  encryptedClientData: string,
+  encryptedCriticalData: string,
+  groups: Array<number>,
+  hiddenGroups: Array<number>,
+
+  users: Array<string>,
+  icons: Array<string>,
+  /** Maps group ids to group names to display them in the ACL. */
+  groupMap: { [key: number]: GroupInfo },
+  title: string,
+
+  /** Group ID of the owning organization. This is immutable. */
+  owningOrgId: number,
+  owningOrgName: string,
+
+  lastModified: AuditAction,
+  lastAccessed: AuditAction,
+  king: string,
+  isViewable: boolean,
+
+  canEditServerSecret: boolean,
+  groupIdToPublicKeyMap: { [key: number]: string },
+
+  // local unencrypted data:
+  clientData: any,
+  criticalData: any,
+};
+
+type SecretToPath = Secret & { groupIdPath: Array<number> };
+
+type Group = {
+  groupId: number;
+  secrets: Array<Secret>;
+};
+
 /**
  * GetGroup
  *
@@ -679,13 +732,19 @@ var RemoveMember = clearCacheAndCall(function(args, onSuccess: OnSuccess, onErro
 function GetGroup(args: Object, onSuccess: OnSuccess, onError: OnError) {
   try {
     assert(args.gid);
-    var request = {groupId : args.gid, userId: args.uid, includeCriticalData: args.includeCriticalData};
-    var resp = _getCache(args).getItem(lru_cache.makeKey('GetGroup', args.uid, args.gid, args.includeCriticalData));
+    const request = {
+      groupId: args.gid,
+      userId: args.uid,
+      includeCriticalData: args.includeCriticalData,
+    };
+    const resp = _getCache(args).getItem(lru_cache.makeKey('GetGroup', args.uid, args.gid, args.includeCriticalData));
+
     if (resp) {
         console.log('mitro_lib GetGroup: Found response in cache');
         onSuccess(JSON.parse(resp));
         return; // IMPORTANT DO NOT REMOVE
     }
+
     PostToMitro(request, args, '/mitro-core/api/GetGroup', function(resp) {
       _getCache(args).setItem(lru_cache.makeKey('GetGroup', args.uid, args.gid, args.includeCriticalData),
         JSON.stringify(resp),
@@ -695,7 +754,6 @@ function GetGroup(args: Object, onSuccess: OnSuccess, onError: OnError) {
   } catch (e) {
     onError(makeLocalException(e));
   }
-
 };
 
 
@@ -723,14 +781,16 @@ var AddSecrets = clearCacheAndCall(function(args, data, onSuccess: OnSuccess, on
             var publicKeyString = keys.groupIdToPublicKey[gid];
             console.log("getting key for ", gid);
             assert(publicKeyString);
-            var groupPublicKey = crypto.loadFromJson(publicKeyString);
-            var secretId = data.secretId; // could be undefined, this is OK (!)
+            const groupPublicKey = crypto.loadFromJson(publicKeyString);
+            const secretId = data.secretId; // could be undefined, this is OK (!)
             assert (groupPublicKey);
-            var request = {myUserId: args.uid, ownerGroupId : gid,
-                     encryptedClientData: groupPublicKey.encrypt(clientSecret),
-                     encryptedCriticalData: groupPublicKey.encrypt(criticalSecret),
-                     secretId: secretId
-                     };
+            const request = {
+              myUserId: args.uid,
+              ownerGroupId : gid,
+              encryptedClientData: groupPublicKey.encrypt(clientSecret),
+              encryptedCriticalData: groupPublicKey.encrypt(criticalSecret),
+              secretId: secretId
+            };
             toRun.push([PostToMitro, [request, args, '/mitro-core/api/AddSecret']]);
             // if we are adding a new secret, set the secret id for the subsequent requests
             // TODO: Ideally this API should do this with one server request

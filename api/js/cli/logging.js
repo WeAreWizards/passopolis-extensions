@@ -1,3 +1,4 @@
+// @flow
 /*
  * *****************************************************************************
  * Copyright (c) 2012, 2013, 2014 Lectorius, Inc.
@@ -24,29 +25,11 @@
  * *****************************************************************************
  */
 
-var mitro = mitro || {};
-
-/** @suppress{duplicate} */
-var debugMode;
-(function() {
-// define mitro
-if(typeof(window) !== 'undefined') {
-  if (typeof(mitro) === 'undefined') {
-    mitro = {};
-  }
-  mitro.log = {};
-}
-// define node.js module
-else if(typeof(module) !== 'undefined' && module.exports) {
-  mitro = {};
-  module.exports = mitro.log = {};
-}
-
-var makeCircularBuffer = function(size) {
-  var loc = 0;
-  var data = [];
-  var obj = {
-    get  : function(k){
+export const makeCircularBuffer = function(size: number) {
+  let loc = 0;
+  let data = [];
+  let obj = {
+    get: function(k: number) {
       if (k < 0 || data.length <= k) {
         return undefined;
       }
@@ -54,69 +37,58 @@ var makeCircularBuffer = function(size) {
       // the "oldest" entry in the array is the one that loc points at
       return data[(loc + k) % data.length];
     },
-    push : function(){
+    push: function() {
       var dat = Array.prototype.slice.call(arguments);
       data[loc] = dat;
       loc = (loc + 1) % size;
     },
     size : function() {
       return data.length;
-    }
-  };
-
-  obj.toArray = function() {
-    var rval = [];
-    for (var i=0; i < obj.size(); ++i) {
-      rval.push(obj.get(i));
-    }
-    return rval;
-  };
-
-  obj.toString = function() {
-    var outputArray = obj.toArray();
-    var output = '';
-    for (var i = 0; i < outputArray.length; i++) {
-      // don't modify the actual data in the buffer
-      var rowArrayCopy = outputArray[i].slice();
-      for (var j = 0; j < rowArrayCopy.length; j++) {
-        var element = rowArrayCopy[j];
-        if (element instanceof Error) {
-          // Browser's default JSON.stringify doesn't convert native Error instances
-          element = {
-            name: element.name,
-            message: element.message,
-            stack: element.stack
-          };
-        }
-
-        // recursively converts arrays and objects
-        if (typeof element == 'object') {
-          rowArrayCopy[j] = JSON.stringify(element);
-        }
+    },
+    toArray: function() {
+      var rval = [];
+      for (var i=0; i < obj.size(); ++i) {
+        rval.push(obj.get(i));
       }
+      return rval;
+    },
+    toString: function() {
+      var outputArray = obj.toArray();
+      var output = '';
+      for (var i = 0; i < outputArray.length; i++) {
+        // don't modify the actual data in the buffer
+        var rowArrayCopy = outputArray[i].slice();
+        for (var j = 0; j < rowArrayCopy.length; j++) {
+          var element = rowArrayCopy[j];
+          if (element instanceof Error) {
+            // Browser's default JSON.stringify doesn't convert native Error instances
+            element = {
+              name: element.name,
+              message: element.message,
+              stack: element.stack
+            };
+          }
 
-      output += rowArrayCopy.join(' ');
-      output += '\n';
+          // recursively converts arrays and objects
+          if (typeof element == 'object') {
+            rowArrayCopy[j] = JSON.stringify(element);
+          }
+        }
+
+        output += rowArrayCopy.join(' ');
+        output += '\n';
+      }
+      return output;
     }
-    return output;
   };
-
   return obj;
 };
 
-var logBuffer = makeCircularBuffer(500);
-mitro.log.makeCircularBuffer = makeCircularBuffer;
-mitro.log.logBuffer = logBuffer;
-var oldLog = console.log;
-mitro.log.captureLogsToBuffer = function() {
+export const logBuffer = makeCircularBuffer(500);
+const oldLog = console.log;
+export const captureLogsToBuffer = function() {
   console.log = logBuffer.push;
 };
-mitro.log.stopCapturingLogsToBuffer = function() {
+export const stopCapturingLogsToBuffer = function() {
   console.log = oldLog;
 };
-
-if (!debugMode) {
-  mitro.log.captureLogsToBuffer();
-}
-
-})();
